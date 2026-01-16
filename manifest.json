@@ -3,6 +3,7 @@
   "name": "Component Auditor",
   "version": "1.0.0",
   "description": "A specialized browser extension for creating high-fidelity UI datasets by capturing and analyzing web components.",
+  "default_locale": "en",
   "devtools_page": "devtools.html",
   "permissions": [
     "storage",

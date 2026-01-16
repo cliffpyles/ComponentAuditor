@@ -28,13 +28,50 @@
     .empty-state p {
       margin: 8px 0;
     }
+    
+    .select-btn {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      background-color: #4285f4;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 16px 0;
+      transition: background-color 0.2s;
+    }
+    
+    .select-btn:hover {
+      background-color: #3367d6;
+    }
+    
+    .select-btn:active {
+      background-color: #2b5aa0;
+    }
+    
+    .select-btn.active {
+      background-color: #ea4335;
+    }
+    
+    .select-btn.active:hover {
+      background-color: #d33b2c;
+    }
+    
+    .status-message {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+      min-height: 16px;
+    }
   </style>
 </head>
 <body>
   <h1>Component Lab</h1>
   <div class="empty-state">
     <p>Component Auditor is ready.</p>
-    <p>Click "Select Component" to start capturing UI elements.</p>
+    <button id="select-component-btn" class="select-btn">Select Component</button>
+    <p id="status-message" class="status-message"></p>
   </div>
   
   <script src="panel.js"></script>

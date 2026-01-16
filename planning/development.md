@@ -27,13 +27,13 @@
 
 ### 1.3 The "Picker" (Visual Selection)
 
-- [ ] **Content Script Injection:** Ensure `content.js` loads on all pages.
-- [ ] **Overlay UI:** Create the DOM element for the "Highlighter Box" (absolute positioned `div`, z-index 999999).
-- [ ] **Hover Logic:**
+- [x] **Content Script Injection:** Ensure `content.js` loads on all pages.
+- [x] **Overlay UI:** Create the DOM element for the "Highlighter Box" (absolute positioned `div`, z-index 999999).
+- [x] **Hover Logic:**
   - Add `mouseover` listener to `document`.
   - Calculate `target.getBoundingClientRect()`.
   - Update Overlay position/size to match target.
-- [ ] **Selection Logic:**
+- [x] **Selection Logic:**
   - Add `click` listener.
   - `e.preventDefault()` and `e.stopPropagation()` to block native site behavior.
   - Save reference: `window.__CA_LAST_ELEMENT__ = e.target`.

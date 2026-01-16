@@ -58,3 +58,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented `onDisconnect` handler to trigger cleanup when DevTools closes (safety switch)
   - Added message forwarding from content scripts to DevTools panel
   - Implemented cleanup notifications to content scripts when DevTools panel disconnects
+
+#### Phase 1.3: The "Picker" (Visual Selection)
+
+- **Content Script Implementation**
+
+  - Created `src/content.js` to handle visual element selection on web pages
+  - Implemented content script injection on all pages via manifest configuration
+  - Added connection to background service worker for message routing
+  - Implemented message handling for selection mode control (`START_SELECTION`, `STOP_SELECTION`)
+  - Added cleanup handlers for page unload and DevTools disconnection
+
+- **Visual Overlay System**
+
+  - Created highlighter overlay element (absolute positioned `div` with z-index 999999)
+  - Implemented overlay styling with blue border and semi-transparent background
+  - Added overlay positioning logic using `getBoundingClientRect()` and scroll offsets
+  - Implemented overlay show/hide functionality based on selection mode state
+
+- **Hover Highlighting**
+
+  - Added `mouseover` event listener to `document` with capture phase
+  - Implemented real-time overlay position/size updates to match hovered elements
+  - Added logic to prevent overlay from highlighting itself
+  - Implemented cursor change to crosshair during selection mode
+
+- **Element Selection Logic**
+
+  - Added `click` event listener with capture phase for element selection
+  - Implemented `preventDefault()` and `stopPropagation()` to block native site behavior
+  - Added global reference storage: `window.__CA_LAST_ELEMENT__ = e.target`
+  - Implemented element selection message (`ELEMENT_SELECTED`) sent to DevTools panel via background script
+  - Added automatic selection mode disable after element selection
+
+- **Panel UI Enhancements**
+
+  - Updated `src/panel.html` with "Select Component" button and status message display
+  - Added button styling with active state (red when selection mode is active)
+  - Implemented `src/panel.js` to handle button click events
+  - Added selection mode toggle functionality (start/stop)
+  - Implemented status message updates to guide user during selection
+  - Added element selection message handling to display selected element information
+
+- **Background Script Updates**
+  - Added message forwarding functions for content script communication
+  - Implemented `forwardToContentScript()` function to route messages to content scripts
+  - Added `getTabIdFromPort()` helper function to extract tab IDs from port connections
+  - Enhanced message routing to handle `START_SELECTION` and `STOP_SELECTION` messages
+  - Improved `ELEMENT_SELECTED` message forwarding to DevTools panel
+
+### Fixed
+
+- **Localization Configuration**
+  - Added `default_locale: "en"` to `manifest.json` to resolve Chrome extension loading error
+  - Created `_locales/en/messages.json` with basic English localization strings
+  - Fixed "Localization used, but default_locale wasn't specified" error when loading the extension

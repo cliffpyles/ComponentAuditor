@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Component Auditor",
+    "description": "The name of the extension"
+  },
+  "extensionDescription": {
+    "message": "A specialized browser extension for creating high-fidelity UI datasets by capturing and analyzing web components.",
+    "description": "The description of the extension"
+  }
+}

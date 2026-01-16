@@ -75,12 +75,29 @@
         
         case 'ELEMENT_SELECTED':
           // Forward element selection to DevTools panel
-          forwardToDevToolsPanel(message.tabId, message);
+          const elementTabId = getTabIdFromPort(senderPort);
+          if (elementTabId) {
+            forwardToDevToolsPanel(elementTabId, message);
+          }
           break;
         
         case 'CONTENT_SCRIPT_READY':
           // Content script is ready, acknowledge
           senderPort.postMessage({ type: 'CONTENT_SCRIPT_ACK' });
+          break;
+        
+        case 'START_SELECTION':
+          // Forward start selection message to content script
+          forwardToContentScript(message.tabId || getTabIdFromPort(senderPort), {
+            type: 'START_SELECTION'
+          });
+          break;
+        
+        case 'STOP_SELECTION':
+          // Forward stop selection message to content script
+          forwardToContentScript(message.tabId || getTabIdFromPort(senderPort), {
+            type: 'STOP_SELECTION'
+          });
           break;
         
         default:
@@ -181,6 +198,29 @@
     } else {
       console.warn(`Background: No DevTools panel connection found for tab ${tabId}`);
     }
+  }
+
+  /**
+   * Forward message to content script for a specific tab
+   */
+  function forwardToContentScript(tabId, message) {
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, message).catch(err => {
+        console.warn(`Background: Could not send message to content script for tab ${tabId}`, err);
+      });
+    } else {
+      console.warn('Background: No tabId provided for content script message');
+    }
+  }
+
+  /**
+   * Get tabId from port sender
+   */
+  function getTabIdFromPort(port) {
+    if (port && port.sender && port.sender.tab) {
+      return port.sender.tab.id;
+    }
+    return null;
   }
 
   /**
