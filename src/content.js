@@ -13,6 +13,7 @@
   // State management
   let isSelectionMode = false;
   let overlay = null;
+  let overlayTooltip = null;
   let port = null;
   let currentTabId = null;
 
@@ -42,6 +43,9 @@
       handleMessage(message);
       return true; // Keep channel open for async response
     });
+    
+    // Add global keyboard listener for ESC key
+    document.addEventListener("keydown", handleKeyDown);
 
     // Handle disconnection
     port.onDisconnect.addListener(function () {
@@ -156,15 +160,41 @@
 
     overlay = document.createElement("div");
     overlay.id = "__CA_OVERLAY__";
+    
+    // Use high contrast visual style
     overlay.style.cssText = `
       position: absolute;
       pointer-events: none;
-      z-index: 999999;
-      border: 2px solid #4285f4;
-      background-color: rgba(66, 133, 244, 0.1);
+      z-index: 2147483647; /* Max Z-Index */
+      border: 2px solid #1a73e8;
+      background-color: rgba(26, 115, 232, 0.1);
       box-sizing: border-box;
       display: none;
+      transition: all 0.1s ease-out;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
     `;
+
+    // Create Tooltip
+    overlayTooltip = document.createElement("div");
+    overlayTooltip.id = "__CA_OVERLAY_TOOLTIP__";
+    overlayTooltip.style.cssText = `
+      position: absolute;
+      top: -28px;
+      left: 0;
+      background: #1a73e8;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: bold;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 2147483647;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    `;
+    overlay.appendChild(overlayTooltip);
 
     document.body.appendChild(overlay);
     return overlay;
@@ -184,12 +214,34 @@
     const rect = target.getBoundingClientRect();
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-
+    
+    // Update position
     overlay.style.display = "block";
     overlay.style.left = `${rect.left + scrollX}px`;
     overlay.style.top = `${rect.top + scrollY}px`;
     overlay.style.width = `${rect.width}px`;
     overlay.style.height = `${rect.height}px`;
+    
+    // Update tooltip
+    if (overlayTooltip) {
+      const tagName = target.tagName.toLowerCase();
+      const id = target.id ? `#${target.id}` : '';
+      const className = target.className && typeof target.className === 'string' 
+        ? `.${target.className.split(' ')[0]}` 
+        : '';
+      const dimensions = `${Math.round(rect.width)} × ${Math.round(rect.height)}`;
+      
+      overlayTooltip.textContent = `${tagName}${id}${className} (${dimensions})`;
+      
+      // Adjust tooltip position if it goes off screen
+      if (rect.top < 30) {
+        overlayTooltip.style.top = '100%';
+        overlayTooltip.style.marginTop = '4px';
+      } else {
+        overlayTooltip.style.top = '-28px';
+        overlayTooltip.style.marginTop = '0';
+      }
+    }
   }
 
   /**
@@ -215,6 +267,33 @@
     }
 
     updateOverlay(e.target);
+  }
+  
+  /**
+   * Handle keyboard events (ESC to cancel)
+   */
+  function handleKeyDown(e) {
+    if (!isSelectionMode) return;
+    
+    if (e.key === "Escape") {
+      console.log("Component Auditor: ESC pressed, cancelling selection");
+      
+      // Send cancel message to background (which forwards to panel)
+      if (port) {
+        port.postMessage({
+          type: "SELECTION_CANCELED",
+          tabId: currentTabId
+        });
+      } else {
+        // Fallback
+         chrome.runtime.sendMessage({
+          type: "SELECTION_CANCELED",
+          tabId: currentTabId
+        });
+      }
+      
+      disableSelectionMode();
+    }
   }
 
   /**
@@ -416,367 +495,60 @@
     const detected = [];
 
     try {
-      console.log("Component Auditor: Starting framework detection");
-      console.log("Component Auditor: window object available?", typeof window !== "undefined");
-      console.log("Component Auditor: document object available?", typeof document !== "undefined");
-
-      // React Detection - Multiple reliable methods
+      // React Detection
       let hasReact = false;
-
-      // Method 1: React DevTools hook (most reliable)
       if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
         const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
-        // Check if hook has renderers (indicates active React app)
-        if (hook.renderers && hook.renderers.size > 0) {
-          hasReact = true;
-        } else if (hook._renderers && Object.keys(hook._renderers).length > 0) {
-          hasReact = true;
-        } else if (hook.onCommitFiberRoot || hook.onCommitFiberUnmount) {
-          // React 16+ indicators
-          hasReact = true;
-        } else {
-          // Even if hook exists without renderers, it's a strong indicator of React
-          // (DevTools hook is injected by React DevTools extension or React itself)
+        if ((hook.renderers && hook.renderers.size > 0) || (hook._renderers && Object.keys(hook._renderers).length > 0)) {
           hasReact = true;
         }
       }
-
-      // Method 2: Check for React global (if exposed)
       if (!hasReact && (window.React || window.ReactDOM)) {
         hasReact = true;
       }
-
-      // Method 3: Check DOM for React-specific root elements and data attributes
       if (!hasReact) {
-        // Check for React-specific data attributes first (most reliable)
-        const reactDataAttr =
-          document.querySelector("[data-reactroot]") ||
-          document.querySelector("[data-react-helmet]") ||
-          document.querySelector("[data-react-class]");
-
-        if (reactDataAttr) {
-          hasReact = true;
-        } else {
-          // Check for common React root IDs (less reliable, but common pattern)
-          const reactRoot =
-            document.querySelector("#root") || document.querySelector("#app") || document.querySelector("#react-root");
-
-          // If we find a common React root, check if it has React fiber properties
-          // (though these might not be accessible in content script context)
-          if (reactRoot) {
-            // Additional check: look for React-specific patterns in the DOM
-            // React often uses data attributes or specific class patterns
-            const hasReactPatterns =
-              document.querySelector("[data-testid]") ||
-              document.querySelector("[class*='react']") ||
-              document.querySelector("[class*='React']");
-
-            // If we find root AND React patterns, it's likely React
-            if (hasReactPatterns) {
-              hasReact = true;
-            } else {
-              // If root exists but no patterns, still consider it React if no Angular indicators
-              // (heuristic: most modern apps using #root are React)
-              const hasAngularIndicators = document.querySelector("[ng-version]") || document.querySelector("[ng-app]");
-              if (!hasAngularIndicators) {
-                hasReact = true;
-              }
-            }
-          }
-        }
+         if (document.querySelector("[data-reactroot]") || document.querySelector("[data-react-helmet]")) {
+             hasReact = true;
+         }
       }
+      if (hasReact) detected.push("React");
 
-      // Method 4: Check script tags (external) for React
-      if (!hasReact) {
-        const scripts = document.querySelectorAll("script[src]");
-        for (const script of scripts) {
-          const src = script.src.toLowerCase();
-          if (src.includes("react") || src.includes("react-dom") || src.includes("/react/")) {
-            hasReact = true;
-            break;
-          }
-        }
-      }
-
-      // Method 5: Check inline scripts for React references
-      if (!hasReact) {
-        const inlineScripts = document.querySelectorAll("script:not([src])");
-        for (const script of inlineScripts) {
-          const content = script.textContent || script.innerHTML;
-          if (content && (content.includes("React") || content.includes("react-dom") || content.includes("__REACT"))) {
-            hasReact = true;
-            break;
-          }
-        }
-      }
-
-      if (hasReact) {
-        detected.push("React");
-      }
-
-      // Vue Detection - Multiple reliable methods
+      // Vue Detection
       let hasVue = false;
-
-      // Method 1: Vue DevTools hook
-      if (window.__VUE_DEVTOOLS_GLOBAL_HOOK__) {
+      if (window.__VUE_DEVTOOLS_GLOBAL_HOOK__ || typeof window.Vue !== "undefined" || window.__VUE__) {
         hasVue = true;
       }
-
-      // Method 2: Vue global (Vue 2)
-      if (!hasVue && typeof window.Vue !== "undefined") {
-        hasVue = true;
-      }
-
-      // Method 3: Vue 3 app instance
-      if (!hasVue && window.__VUE__) {
-        hasVue = true;
-      }
-
-      // Method 4: Check DOM for Vue-specific attributes
-      if (!hasVue) {
-        // Vue 2 uses data-v-* attributes, Vue 3 uses v-* directives
-        // Check for common Vue directives
-        const vueElement =
-          document.querySelector("[v-cloak]") ||
-          document.querySelector("[v-if]") ||
-          document.querySelector("[v-for]") ||
-          document.querySelector("[v-model]") ||
-          document.querySelector("[v-show]") ||
-          document.querySelector("[v-bind]");
-
-        // Also check for Vue 2 data-v-* scoped style attributes
-        if (!vueElement) {
-          const allElements = document.querySelectorAll("*");
-          for (let i = 0; i < Math.min(100, allElements.length); i++) {
-            const el = allElements[i];
-            if (el && el.hasAttribute && el.hasAttribute("data-v-")) {
-              hasVue = true;
-              break;
-            }
-            // Check for any attribute starting with data-v-
-            const attrs = el.attributes;
-            if (attrs) {
-              for (let j = 0; j < attrs.length; j++) {
-                if (attrs[j].name && attrs[j].name.startsWith("data-v-")) {
-                  hasVue = true;
-                  break;
-                }
-              }
-              if (hasVue) break;
-            }
-          }
-        }
-
-        if (vueElement) {
-          hasVue = true;
-        }
-      }
-
-      // Method 5: Check script tags (external) for Vue
-      if (!hasVue) {
-        const scripts = document.querySelectorAll("script[src]");
-        for (const script of scripts) {
-          const src = script.src.toLowerCase();
-          if (src.includes("vue") || src.includes("/vue/")) {
-            hasVue = true;
-            break;
-          }
-        }
-      }
-
-      // Method 6: Check inline scripts for Vue references
-      if (!hasVue) {
-        const inlineScripts = document.querySelectorAll("script:not([src])");
-        for (const script of inlineScripts) {
-          const content = script.textContent || script.innerHTML;
-          if (content && (content.includes("Vue") || content.includes("__VUE"))) {
-            hasVue = true;
-            break;
-          }
-        }
-      }
-
-      if (hasVue) {
-        detected.push("Vue");
-      }
-
+      if (hasVue) detected.push("Vue");
+      
       // Angular Detection
-      // Skip Angular detection if React is already detected (to avoid false positives)
       let hasAngular = false;
-
-      // Only proceed with Angular detection if React wasn't detected
-      // (React apps sometimes have generic element names that could match Angular patterns)
-      if (!hasReact) {
-        // Method 1: AngularJS (v1.x)
-        if (typeof window.angular !== "undefined" && window.angular.version) {
-          detected.push("AngularJS");
-          hasAngular = true;
-        }
-
-        // Method 2: Angular 2+ (check for ng-version attribute - most reliable)
-        // Only use ng-version as it's Angular-specific. app-root and ng-component are too generic.
-        if (!hasAngular) {
-          const ngVersionElement = document.querySelector("[ng-version]");
-          if (ngVersionElement) {
-            detected.push("Angular");
-            hasAngular = true;
-          }
-        }
-
-        // Method 2b: Check for ng-app (AngularJS specific)
-        if (!hasAngular) {
-          const ngAppElement = document.querySelector("[ng-app]");
-          if (ngAppElement) {
-            // Double-check it's actually Angular by looking for Angular-specific patterns
-            const hasAngularPatterns =
-              document.querySelector("[ng-controller]") ||
-              document.querySelector("[ng-repeat]") ||
-              document.querySelector("[ng-if]");
-            if (hasAngularPatterns) {
-              detected.push("AngularJS");
+      if (!hasReact) { // Reduce false positives
+          if (window.angular || document.querySelector("[ng-version]") || document.querySelector("[ng-app]")) {
               hasAngular = true;
-            }
           }
-        }
-
-        // Method 3: Check for Angular in window (Angular 2+)
-        if (!hasAngular && window.ng && window.ng.probe) {
-          detected.push("Angular");
-          hasAngular = true;
-        }
-
-        // Method 4: Check script tags (external) for Angular
-        if (!hasAngular) {
-          const scripts = document.querySelectorAll("script[src]");
-          for (const script of scripts) {
-            const src = script.src.toLowerCase();
-            if (src.includes("angular") || src.includes("/angular/")) {
-              if (!detected.includes("Angular") && !detected.includes("AngularJS")) {
-                detected.push("Angular");
-              }
-              hasAngular = true;
-              break;
-            }
-          }
-        }
-
-        // Method 5: Check inline scripts for Angular references
-        if (!hasAngular) {
-          const inlineScripts = document.querySelectorAll("script:not([src])");
-          for (const script of inlineScripts) {
-            const content = script.textContent || script.innerHTML;
-            if (content && (content.includes("angular") || content.includes("ng."))) {
-              if (!detected.includes("Angular") && !detected.includes("AngularJS")) {
-                detected.push("Angular");
-              }
-              hasAngular = true;
-              break;
-            }
-          }
-        }
       }
+      if (hasAngular) detected.push("Angular");
 
-      // jQuery Detection
-      if (typeof window.jQuery !== "undefined" && typeof window.jQuery.fn !== "undefined") {
-        detected.push("jQuery");
-      } else if (typeof window.$ !== "undefined" && typeof window.$.fn !== "undefined" && window.$.fn.jquery) {
-        detected.push("jQuery");
-      }
-
-      // Webpack Detection
-      if (window.__webpack_require__ || window.webpackJsonp) {
-        detected.push("webpack");
-      }
-
-      // CSS Framework Detection
-      // Bootstrap - check for Bootstrap classes or data attributes
-      const hasBootstrap =
-        document.querySelector(".container") ||
-        document.querySelector(".row") ||
-        document.querySelector("[class*='col-']") ||
-        document.querySelector("[data-bs-toggle]") ||
-        document.querySelector("[data-toggle]");
-      if (hasBootstrap) {
-        detected.push("Bootstrap");
-      }
-
-      // Tailwind CSS - check for Tailwind utility classes
-      // Check common container elements and a limited sample
-      let hasTailwind = false;
-
-      // Check body and common container elements first (most likely to have Tailwind classes)
-      const commonElements = [
-        document.body,
-        document.querySelector("main"),
-        document.querySelector("header"),
-        document.querySelector("nav"),
-        document.querySelector("footer"),
-        document.querySelector("article"),
-        document.querySelector("section"),
-      ].filter(Boolean);
-
-      // Tailwind-specific patterns that are less likely to be false positives
-      const tailwindPattern =
-        /^(flex|grid|hidden|block|inline|absolute|relative|fixed|sticky|p-\d+|px-\d+|py-\d+|pt-\d+|pr-\d+|pb-\d+|pl-\d+|m-\d+|mx-\d+|my-\d+|mt-\d+|mr-\d+|mb-\d+|ml-\d+|text-\w+|bg-\w+|border-\w+|rounded-\w+|w-\w+|h-\w+|max-w-\w+|min-w-\w+|max-h-\w+|min-h-\w+)/;
-
-      for (const el of commonElements) {
-        if (el && el.className && typeof el.className === "string") {
-          const classes = el.className.split(/\s+/);
-          if (classes.some((cls) => tailwindPattern.test(cls))) {
-            hasTailwind = true;
-            break;
-          }
-        }
-      }
-
-      // If not found, check script tags for Tailwind
-      if (!hasTailwind) {
-        const scripts = document.querySelectorAll("script[src]");
-        for (const script of scripts) {
-          const src = script.src.toLowerCase();
-          if (src.includes("tailwind")) {
-            hasTailwind = true;
-            break;
-          }
-        }
-      }
-
-      // Last resort: check a small sample of elements (first 100)
-      if (!hasTailwind) {
-        const allElements = document.querySelectorAll("*");
-        const sampleSize = Math.min(100, allElements.length);
-        for (let i = 0; i < sampleSize; i++) {
+      // CSS Frameworks
+      if (document.querySelector(".container") || document.querySelector("[class*='col-']")) detected.push("Bootstrap");
+      
+      const tailwindPattern = /^(flex|grid|p-\d+|m-\d+|text-\w+|bg-\w+|rounded-\w+)/;
+      const allElements = document.querySelectorAll("*");
+      for (let i = 0; i < Math.min(100, allElements.length); i++) {
           const el = allElements[i];
-          if (el && el.className && typeof el.className === "string") {
-            const classes = el.className.split(/\s+/);
-            if (classes.some((cls) => tailwindPattern.test(cls))) {
-              hasTailwind = true;
-              break;
-            }
+          if (el.className && typeof el.className === 'string') {
+              const classes = el.className.split(/\s+/);
+              if (classes.some(c => tailwindPattern.test(c))) {
+                  detected.push("Tailwind");
+                  break;
+              }
           }
-        }
       }
 
-      if (hasTailwind) {
-        detected.push("Tailwind");
-      }
-
-      // Material-UI - check for MUI class patterns
-      const hasMUI =
-        document.querySelector("[class*='Mui']") ||
-        document.querySelector("[class*='mui-']") ||
-        document.querySelector("[class*='makeStyles']");
-      if (hasMUI) {
-        detected.push("Material-UI");
-      }
-
-      console.log("Component Auditor: Framework detection complete", detected);
     } catch (error) {
       console.error("Component Auditor: Error detecting frameworks", error);
-      console.error("Component Auditor: Error stack", error.stack);
     }
 
-    console.log("Component Auditor: Returning frameworks array", detected);
     return detected;
   }
 
@@ -788,8 +560,6 @@
     try {
       const location = window.location;
       const route = location.pathname || "/";
-
-      // Parse query parameters
       const queryParams = {};
       if (location.search) {
         const searchParams = new URLSearchParams(location.search);
@@ -797,17 +567,83 @@
           queryParams[key] = value;
         }
       }
-
-      return {
-        route: route,
-        queryParams: queryParams,
-      };
+      return { route, queryParams };
     } catch (error) {
-      console.warn("Component Auditor: Error parsing URL", error);
-      return {
-        route: window.location.pathname || "/",
-        queryParams: {},
-      };
+      return { route: "/", queryParams: {} };
+    }
+  }
+
+  /**
+   * Guess the atomic level of an element based on heuristics
+   * @param {Element} element - The element to analyze
+   * @returns {string} - Guessed atomic level (Atom, Molecule, Organism, Template, Page)
+   */
+  function guessAtomicLevel(element) {
+    try {
+      if (!element) return "Atom";
+
+      const tagName = element.tagName.toLowerCase();
+      const children = Array.from(element.children);
+      const childCount = children.length;
+      const textContent = element.textContent?.trim() || "";
+      const hasText = textContent.length > 0;
+      const hasOnlyText = childCount === 0 && hasText;
+
+      // Block-level elements that are typically atoms
+      const atomTags = ["button", "input", "img", "svg", "a", "span", "strong", "em", "code", "label"];
+      
+      // Large container elements that are typically organisms or templates
+      const organismTags = ["header", "footer", "nav", "main", "article", "section", "aside"];
+      const templateTags = ["body", "html"];
+
+      // If it's a template-level tag
+      if (templateTags.includes(tagName)) {
+        return "Template";
+      }
+
+      // If it's a page-level container
+      if (tagName === "html" || element === document.documentElement) {
+        return "Page";
+      }
+
+      // If it has no children and is a simple element, likely an Atom
+      if (hasOnlyText || (childCount === 0 && atomTags.includes(tagName))) {
+        return "Atom";
+      }
+
+      // If it's a known organism-level tag
+      if (organismTags.includes(tagName)) {
+        return "Organism";
+      }
+
+      // If it has many children (5+), likely an Organism
+      if (childCount >= 5) {
+        return "Organism";
+      }
+
+      // If it has multiple distinct child types, likely a Molecule
+      if (childCount >= 2) {
+        const childTypes = new Set(children.map((c) => c.tagName.toLowerCase()));
+        if (childTypes.size >= 2) {
+          return "Molecule";
+        }
+      }
+
+      // If it has one child, check if that child is complex
+      if (childCount === 1) {
+        const firstChild = children[0];
+        const grandChildren = Array.from(firstChild.children || []);
+        if (grandChildren.length > 0) {
+          return "Molecule";
+        }
+        return "Atom";
+      }
+
+      // Default to Atom for simple elements
+      return "Atom";
+    } catch (error) {
+      console.warn("Component Auditor: Error guessing atomic level", error);
+      return "Atom";
     }
   }
 
@@ -827,6 +663,12 @@
     if (e.target === overlay || (overlay && overlay.contains(e.target))) {
       return;
     }
+    
+    // Animate overlay before proceeding (Visual feedback)
+    if (overlay) {
+        overlay.style.backgroundColor = "rgba(26, 115, 232, 0.4)";
+        overlay.style.transition = "background-color 0.1s ease";
+    }
 
     // Save reference to selected element
     window.__CA_LAST_ELEMENT__ = e.target;
@@ -842,12 +684,10 @@
     const siblings = extractSiblings(e.target);
     const tokens = extractTokens(e.target);
 
-    // Extract context awareness data (framework detection and URL parsing)
-    console.log("Component Auditor: About to detect frameworks");
+    // Extract context awareness data
     const frameworks = detectFrameworks();
-    console.log("Component Auditor: Detected frameworks", frameworks);
     const urlData = parseURL();
-    console.log("Component Auditor: URL data", urlData);
+    const guessedAtomicLevel = guessAtomicLevel(e.target);
 
     // Prepare the selection message
     const selectionMessage = {
@@ -858,6 +698,7 @@
         className: e.target.className,
         id: e.target.id,
       },
+      guessedAtomicLevel: guessedAtomicLevel,
       rect: {
         x: rect.left + scrollX,
         y: rect.top + scrollY,
@@ -881,29 +722,23 @@
         timestamp: new Date().toISOString(),
       },
     };
+    
+    // Small delay to show visual feedback before closing overlay
+    setTimeout(() => {
+        // Send selection message to background script
+        if (port) {
+          try {
+            port.postMessage(selectionMessage);
+          } catch (error) {
+            chrome.runtime.sendMessage(selectionMessage).catch(() => {});
+          }
+        } else {
+          chrome.runtime.sendMessage(selectionMessage).catch(() => {});
+        }
 
-    // Send selection message to background script
-    if (port) {
-      try {
-        port.postMessage(selectionMessage);
-        console.log("Content script: Sent ELEMENT_SELECTED via port");
-      } catch (error) {
-        console.error("Content script: Error sending via port, trying fallback", error);
-        // Fallback to chrome.runtime.sendMessage
-        chrome.runtime.sendMessage(selectionMessage).catch(function (err) {
-          console.error("Content script: Failed to send ELEMENT_SELECTED message", err);
-        });
-      }
-    } else {
-      console.warn("Content script: Port is null, using chrome.runtime.sendMessage fallback");
-      // Fallback to chrome.runtime.sendMessage if port is disconnected
-      chrome.runtime.sendMessage(selectionMessage).catch(function (err) {
-        console.error("Content script: Failed to send ELEMENT_SELECTED message", err);
-      });
-    }
-
-    // Disable selection mode after selection
-    disableSelectionMode();
+        // Disable selection mode after selection
+        disableSelectionMode();
+    }, 150);
   }
 
   /**
@@ -960,6 +795,8 @@
    */
   function cleanup() {
     disableSelectionMode();
+    
+    document.removeEventListener("keydown", handleKeyDown);
 
     if (overlay && overlay.parentNode) {
       overlay.parentNode.removeChild(overlay);

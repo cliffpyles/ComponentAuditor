@@ -124,68 +124,68 @@
 
 ### 4.1 Visual Design System
 
-- [ ] **Design Tokens:**
+- [x] **Design Tokens:**
   - Establish consistent typography scale (font families, sizes, weights, line-heights).
   - Define color palette with semantic naming (primary, secondary, success, error, neutral).
   - Create spacing scale (consistent padding, margins, gaps).
   - Define border radius and shadow tokens for depth.
-- [ ] **Theme Integration:**
+- [x] **Theme Integration:**
   - Detect `chrome.devtools.panels.themeName` to support Dark/Light modes.
   - Apply CSS variables that adapt to DevTools theme.
   - Ensure sufficient contrast ratios for accessibility.
-- [ ] **Component Styling:**
+- [x] **Component Styling:**
   - Style all form inputs (text fields, dropdowns, buttons) with consistent visual language.
   - Create reusable UI components (cards, badges, tooltips).
   - Ensure responsive behavior at various DevTools panel sizes.
 
 ### 4.2 Overlay Experience Enhancement
 
-- [ ] **Visual Feedback:**
+- [x] **Visual Feedback:**
   - Add smooth animations when overlay appears/disappears.
   - Implement hover state with clear visual indication (border, glow, or highlight).
   - Add cursor change to indicate selection mode is active.
   - Display element tag name and class names in overlay tooltip.
-- [ ] **Z-Index Management:**
+- [x] **Z-Index Management:**
   - Ensure overlay appears above all page content (including modals, dropdowns).
   - Handle edge cases with fixed/sticky positioned elements.
   - Add visual indicator when element is partially obscured.
-- [ ] **Selection Clarity:**
+- [x] **Selection Clarity:**
   - Add visual confirmation when element is clicked (brief animation or checkmark).
   - Display element dimensions and position information.
   - Show breadcrumb path of element hierarchy.
 
 ### 4.3 Interaction Design & Feedback
 
-- [ ] **Loading States:**
+- [x] **Loading States:**
   - Add loading spinner during screenshot capture and processing.
   - Show progress indicator for data extraction steps.
   - Display skeleton screens while data loads in Library view.
-- [ ] **Success States:**
+- [x] **Success States:**
   - Implement toast notifications for successful captures and saves.
   - Add visual confirmation when component is saved to library.
   - Show success animation on export completion.
-- [ ] **Error States:**
+- [x] **Error States:**
   - Display user-friendly error messages for failed operations.
   - Add retry mechanisms for transient failures.
   - Show clear guidance when capture fails (e.g., cross-origin restrictions).
-- [ ] **Transitions:**
+- [x] **Transitions:**
   - Smooth transitions between "Select Component" mode and "Edit" view.
   - Animate panel state changes (expanding/collapsing sections).
   - Add fade-in animations for Library grid items.
 
 ### 4.4 Panel Layout Optimization
 
-- [ ] **Split View Refinement:**
+- [x] **Split View Refinement:**
   - Optimize left/right panel ratios for different screen sizes.
   - Add resizable splitter for user customization.
   - Ensure screenshot and code preview are clearly visible.
   - Add zoom controls for screenshot inspection.
-- [ ] **Form Layout:**
+- [x] **Form Layout:**
   - Organize form fields into logical groups with clear labels.
   - Add field descriptions/help text for complex inputs.
   - Implement proper form spacing and visual hierarchy.
   - Ensure form is scannable and easy to complete.
-- [ ] **Information Architecture:**
+- [x] **Information Architecture:**
   - Organize technical data (read-only) in collapsible sections.
   - Group related metadata fields together.
   - Add visual separation between different data categories.
@@ -193,21 +193,81 @@
 
 ### 4.5 Workflow Improvements
 
-- [ ] **Capture Workflow:**
+- [x] **Capture Workflow:**
   - Add "Cancel" button to exit selection mode at any time.
   - Implement keyboard shortcuts (Esc to cancel, Enter to confirm).
   - Add quick actions after capture (Save, Edit, Discard).
   - Show preview of captured data before saving.
-- [ ] **Edit Workflow:**
+- [x] **Edit Workflow:**
   - Add "Back" navigation to return to Library without saving.
-  - Implement auto-save draft functionality.
+  - Implement auto-save draft functionality (Partial: Discard confirmation implemented).
   - Add "Save & Capture Another" action for batch workflows.
   - Show unsaved changes indicator.
-- [ ] **Library Workflow:**
+- [x] **Library Workflow:**
   - Add "View Details" action to see full component data.
   - Implement "Edit" action to modify saved components.
   - Add bulk actions (select multiple, delete selected).
   - Show component metadata in Library cards (domain, date, route).
+
+### 4.6 List View as Default
+
+- [x] **Modify Initial State:**
+  - Update `panel.js` to load Library View immediately on init.
+  - Remove separate "Component Auditor is ready" empty state.
+  - Make Library view the primary landing experience.
+- [x] **Unified Empty State:**
+  - Move onboarding instructions into `library-empty` state within Library container.
+  - Ensure "Select Component" button remains accessible from header.
+
+### 4.7 Settings View
+
+- [x] **Settings UI:**
+  - Add "Settings" button (⚙️) to main header.
+  - Create `settings-container` in `panel.html` with form UI.
+  - Implement settings view with show/hide functionality.
+- [x] **Storage:**
+  - Save settings to `localStorage` for persistence.
+  - Load settings on initialization and when settings view opens.
+- [x] **Configurable Options:**
+  - **Default Atomic Level:** Dropdown (Auto-detect, Atom, Molecule, Organism, Template, Page).
+  - **Custom Component Types:** Text area to add custom component types (one per line).
+  - Settings can be saved and reset to defaults.
+
+### 4.8 Intelligent Defaults (Auto-Atomic Level)
+
+- [x] **Heuristic Logic:**
+  - Implement `guessAtomicLevel(element)` function in `content.js`.
+  - Logic: Elements with no children → **Atom**.
+  - Logic: Elements with multiple distinct child types → **Molecule**.
+  - Logic: Large containers (5+ children) or known organism tags → **Organism**.
+  - Logic: Template-level tags → **Template** or **Page**.
+- [x] **Integration:**
+  - Pass guessed atomic level in `ELEMENT_SELECTED` message.
+  - Store guessed level in `window.__CA_GUESSED_ATOMIC_LEVEL__`.
+- [x] **Editor Pre-fill:**
+  - Use guessed level to pre-select "Atomic Level" dropdown when settings is "Auto-detect".
+  - Use selected default atomic level from settings when not "Auto-detect".
+
+### 4.9 Component Naming & Types
+
+- [x] **Schema Update:**
+  - Add `component_type` field to data model in `semantics` object.
+  - Update `handleSave()` to include `component_type` in saved data.
+- [x] **Form UI:**
+  - Add "Component Type" input field with datalist (combobox behavior).
+  - Default options: Button, Card, Modal, Input, List, Navigation, Image, Text, Form, Header, Footer, Sidebar.
+  - Allow custom entry and dynamically add custom types from settings to datalist.
+- [x] **Naming Strategy:**
+  - Update `generateLabel()` to use `component_type` if available.
+  - Generate labels like "Button-primary" instead of "button.btn-primary" when type is provided.
+  - Fallback to original tag-based naming when no type is specified.
+
+### 4.10 Cross-Domain Integration
+
+- [x] **Library Item Update:**
+  - Update `createLibraryItem()` in `panel.js` to display domain in metadata.
+  - Show component metadata as: Component Type • Atomic Level • Domain • Date.
+  - Ensure components from different domains are clearly distinguished in Library view.
 
 ---
 
@@ -307,8 +367,9 @@
 
 ### 5.5 User Experience Polish
 
-- [ ] **Empty States:**
-  - Add informative empty state to Library with onboarding instructions.
+- [x] **Empty States:**
+  - Add informative empty state to Library with onboarding instructions. _(Completed in Phase 4.6)_
+- [ ] **Empty States (Additional):**
   - Show helpful message when no search results found.
   - Add empty state for export (no components to export).
 - [ ] **Accessibility:**

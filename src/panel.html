@@ -3,489 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <title>Component Auditor</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      font-size: 13px;
-      color: #333;
-      background: #fff;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .header {
-      padding: 12px 16px;
-      border-bottom: 1px solid #e0e0e0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    
-    .header-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    
-    h1 {
-      font-size: 16px;
-      margin: 0;
-      font-weight: 600;
-    }
-    
-    .select-btn {
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 500;
-      color: #fff;
-      background-color: #4285f4;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .select-btn:hover {
-      background-color: #3367d6;
-    }
-    
-    .select-btn:active {
-      background-color: #2b5aa0;
-    }
-    
-    .select-btn.active {
-      background-color: #ea4335;
-    }
-    
-    .select-btn.active:hover {
-      background-color: #d33b2c;
-    }
-    
-    .empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      color: #666;
-      text-align: center;
-    }
-    
-    .empty-state p {
-      margin: 8px 0;
-    }
-    
-    .status-message {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #666;
-      min-height: 16px;
-    }
-    
-    /* Editor View - Split Layout */
-    .editor-container {
-      display: none;
-      flex: 1;
-      overflow: hidden;
-      flex-direction: row;
-    }
-    
-    .editor-container.active {
-      display: flex;
-    }
-    
-    .editor-left {
-      width: 50%;
-      border-right: 1px solid #e0e0e0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    
-    .editor-right {
-      width: 50%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    
-    .editor-section {
-      padding: 16px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    
-    .editor-section:last-child {
-      border-bottom: none;
-    }
-    
-    .editor-section-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-    }
-    
-    /* Screenshot Section */
-    .screenshot-container {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f5f5f5;
-      padding: 16px;
-      overflow: auto;
-    }
-    
-    .screenshot-container img {
-      max-width: 100%;
-      max-height: 100%;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    /* Code Section */
-    .code-viewer {
-      max-height: 200px;
-      overflow: auto;
-      background: #f8f8f8;
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      padding: 12px;
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-      font-size: 11px;
-      line-height: 1.5;
-      color: #333;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    
-    /* Form Section */
-    .form-container {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-    }
-    
-    .form-group {
-      margin-bottom: 16px;
-    }
-    
-    .form-label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: #333;
-      margin-bottom: 6px;
-    }
-    
-    .form-label.required::after {
-      content: ' *';
-      color: #ea4335;
-    }
-    
-    .form-input,
-    .form-select,
-    .form-textarea {
-      width: 100%;
-      padding: 8px 12px;
-      font-size: 13px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-family: inherit;
-      transition: border-color 0.2s;
-    }
-    
-    .form-input:focus,
-    .form-select:focus,
-    .form-textarea:focus {
-      outline: none;
-      border-color: #4285f4;
-    }
-    
-    .form-input[readonly] {
-      background-color: #f5f5f5;
-      color: #666;
-      cursor: not-allowed;
-    }
-    
-    .form-textarea {
-      resize: vertical;
-      min-height: 80px;
-      font-family: inherit;
-    }
-    
-    .form-select {
-      cursor: pointer;
-    }
-    
-    .form-actions {
-      padding: 16px;
-      border-top: 1px solid #e0e0e0;
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      flex-shrink: 0;
-    }
-    
-    .btn {
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .btn-primary {
-      background-color: #4285f4;
-      color: #fff;
-    }
-    
-    .btn-primary:hover {
-      background-color: #3367d6;
-    }
-    
-    .btn-primary:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
-    
-    .btn-secondary {
-      background-color: #f5f5f5;
-      color: #333;
-      border: 1px solid #ddd;
-    }
-    
-    .btn-secondary:hover {
-      background-color: #e8e8e8;
-    }
-    
-    .form-error {
-      font-size: 11px;
-      color: #ea4335;
-      margin-top: 4px;
-      display: none;
-    }
-    
-    .form-error.show {
-      display: block;
-    }
-    
-    .readonly-group {
-      background-color: #f9f9f9;
-      padding: 12px;
-      border-radius: 4px;
-      border: 1px solid #e0e0e0;
-    }
-    
-    .readonly-value {
-      font-size: 12px;
-      color: #666;
-      margin: 4px 0;
-    }
-    
-    .readonly-label {
-      font-size: 11px;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
-    }
-    
-    /* Library View */
-    .library-container {
-      display: none;
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-    }
-    
-    .library-container.active {
-      display: block;
-    }
-    
-    .library-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    
-    .library-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #333;
-    }
-    
-    .library-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
-    }
-    
-    .library-item {
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-      background: #fff;
-      transition: box-shadow 0.2s;
-      cursor: pointer;
-    }
-    
-    .library-item:hover {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .library-item-thumbnail {
-      width: 100%;
-      height: 150px;
-      background: #f5f5f5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .library-item-thumbnail img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-    
-    .library-item-info {
-      padding: 12px;
-      position: relative;
-    }
-    
-    .library-item-name {
-      font-size: 12px;
-      font-weight: 500;
-      color: #333;
-      margin-bottom: 4px;
-      word-break: break-word;
-    }
-    
-    .library-item-meta {
-      font-size: 11px;
-      color: #666;
-    }
-    
-    .library-item-delete {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 24px;
-      height: 24px;
-      border: none;
-      background: rgba(234, 67, 53, 0.9);
-      color: #fff;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      line-height: 1;
-      transition: background 0.2s;
-      z-index: 10;
-    }
-    
-    .library-item-delete:hover {
-      background: rgba(234, 67, 53, 1);
-    }
-    
-    .library-empty {
-      text-align: center;
-      padding: 40px 20px;
-      color: #666;
-    }
-    
-    .library-empty p {
-      margin: 8px 0;
-    }
-    
-    .export-btn {
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 500;
-      color: #fff;
-      background-color: #34a853;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .export-btn:hover {
-      background-color: #2d8f47;
-    }
-    
-    .export-btn:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
-    
-    .view-toggle {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 16px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    
-    .view-toggle-btn {
-      padding: 8px 16px;
-      font-size: 12px;
-      font-weight: 500;
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      color: #666;
-      transition: color 0.2s;
-    }
-    
-    .view-toggle-btn:hover {
-      color: #333;
-    }
-    
-    .view-toggle-btn.active {
-      color: #4285f4;
-      border-bottom-color: #4285f4;
-    }
-  </style>
+  <link rel="stylesheet" href="panel.css">
 </head>
 <body>
   <div class="header">
     <h1>Component Auditor</h1>
     <div class="header-actions">
+      <button id="settings-btn" class="btn btn-secondary" title="Settings">⚙️</button>
       <button id="export-btn" class="export-btn" disabled>Export Dataset</button>
       <button id="select-component-btn" class="select-btn">Select Component</button>
     </div>
   </div>
   
-  <div class="empty-state" id="empty-state">
-    <p>Component Auditor is ready.</p>
-    <p id="status-message" class="status-message"></p>
-  </div>
-  
-  <div class="library-container" id="library-container">
+  <div class="library-container active" id="library-container">
     <div class="view-toggle">
-      <button class="view-toggle-btn" id="view-library-btn">Library</button>
-      <button class="view-toggle-btn active" id="view-capture-btn">Capture</button>
+      <button class="view-toggle-btn active" id="view-library-btn">Library</button>
+      <button class="view-toggle-btn" id="view-capture-btn">Capture</button>
     </div>
     <div class="library-header">
       <div class="library-title">Saved Components</div>
@@ -495,19 +28,23 @@
     </div>
     <div class="library-empty" id="library-empty" style="display: none;">
       <p>No components saved yet.</p>
-      <p>Click "Select Component" to start capturing components.</p>
+      <p>Click "Select Component" in the header to start capturing components.</p>
     </div>
+  </div>
+  
+  <div class="empty-state" id="empty-state" style="display: none;">
+    <p id="status-message" class="status-message"></p>
   </div>
   
   <div class="editor-container" id="editor-container">
     <div class="editor-left">
-      <div class="editor-section">
+      <div class="editor-section flex-1">
         <div class="editor-section-title">Screenshot</div>
         <div class="screenshot-container">
           <img id="screenshot-img" src="" alt="Component Screenshot">
         </div>
       </div>
-      <div class="editor-section">
+      <div class="editor-section flex-1">
         <div class="editor-section-title">HTML Code</div>
         <div class="code-viewer" id="code-viewer"></div>
       </div>
@@ -520,22 +57,42 @@
           <div class="form-group">
             <div class="editor-section-title">Technical Data</div>
             <div class="readonly-group">
-              <div class="readonly-value">
-                <span class="readonly-label">Size:</span>
-                <span id="readonly-size">-</span>
+              <div class="readonly-item">
+                <span class="readonly-label">Size</span>
+                <span id="readonly-size" class="readonly-value">-</span>
               </div>
-              <div class="readonly-value">
-                <span class="readonly-label">Font:</span>
-                <span id="readonly-font">-</span>
+              <div class="readonly-item">
+                <span class="readonly-label">Font</span>
+                <span id="readonly-font" class="readonly-value">-</span>
               </div>
-              <div class="readonly-value">
-                <span class="readonly-label">URL:</span>
-                <span id="readonly-url">-</span>
+              <div class="readonly-item" style="grid-column: span 2;">
+                <span class="readonly-label">URL</span>
+                <span id="readonly-url" class="readonly-value">-</span>
               </div>
             </div>
           </div>
           
           <!-- Editable Semantic Fields -->
+          <div class="form-group">
+            <label for="component-type" class="form-label">Component Type</label>
+            <input type="text" id="component-type" class="form-input" list="component-type-list" placeholder="e.g., Button, Card, Modal">
+            <datalist id="component-type-list">
+              <option value="Button">
+              <option value="Card">
+              <option value="Modal">
+              <option value="Input">
+              <option value="List">
+              <option value="Navigation">
+              <option value="Image">
+              <option value="Text">
+              <option value="Form">
+              <option value="Header">
+              <option value="Footer">
+              <option value="Sidebar">
+            </datalist>
+            <div class="form-help">The specific type of component (e.g., Button, Card, Modal)</div>
+          </div>
+          
           <div class="form-group">
             <label for="atomic-level" class="form-label required">Atomic Level</label>
             <select id="atomic-level" class="form-select" required>
@@ -594,11 +151,47 @@
       </div>
       
       <div class="form-actions">
-        <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="cancel-btn" class="btn btn-secondary">Discard</button>
         <button type="button" id="save-btn" class="btn btn-primary">Save Component</button>
       </div>
     </div>
   </div>
+
+  <div class="settings-container" id="settings-container" style="display: none;">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button id="settings-close-btn" class="btn btn-secondary">Close</button>
+    </div>
+    <div class="settings-content">
+      <form id="settings-form">
+        <div class="form-group">
+          <label for="default-atomic-level" class="form-label">Default Atomic Level</label>
+          <select id="default-atomic-level" class="form-select">
+            <option value="auto">Auto-detect</option>
+            <option value="Atom">Atom</option>
+            <option value="Molecule">Molecule</option>
+            <option value="Organism">Organism</option>
+            <option value="Template">Template</option>
+            <option value="Page">Page</option>
+          </select>
+          <div class="form-help">When capturing new components, automatically select this atomic level (or use auto-detection).</div>
+        </div>
+        
+        <div class="form-group">
+          <label for="custom-component-types" class="form-label">Custom Component Types</label>
+          <textarea id="custom-component-types" class="form-textarea" placeholder="Enter one component type per line (e.g., Button, Card, Modal)"></textarea>
+          <div class="form-help">Add custom component types to the Component Type dropdown. One per line.</div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" id="settings-save-btn" class="btn btn-primary">Save Settings</button>
+          <button type="button" id="settings-reset-btn" class="btn btn-secondary">Reset to Defaults</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
   
   <script src="db.js"></script>
   <script src="panel.js"></script>

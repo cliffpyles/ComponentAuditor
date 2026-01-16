@@ -5,6 +5,43 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-01-16
+
+### Added
+
+#### Phase 4: UX/UI & Workflow Refinement
+
+- **Visual Design System**
+
+  - Implemented comprehensive CSS Variable system (`src/panel.css`)
+  - Added support for Dark/Light mode based on system preferences
+  - Standardized typography, colors, spacing, and shadows
+  - Modernized UI components (buttons, forms, cards) with consistent styling
+
+- **Enhanced Selection Overlay**
+
+  - High-fidelity blue overlay with semi-transparent fill
+  - Animated transitions for smooth visual feedback
+  - Intelligent tooltip displaying:
+    - Tag name
+    - Class/ID
+    - Dimensions (e.g., `div.card (400 × 200)`)
+  - Improved Z-index management to ensure visibility over all page content
+  - Added ESC key support to cancel selection mode
+
+- **Workflow Improvements**
+
+  - **Edit Existing Components:** Click library items to reload them into the editor
+  - **Component Updates:** Saving an edited component now updates the existing record instead of creating a duplicate
+  - **Cancel/Discard:** Added confirmation dialogs when discarding changes
+  - **Toast Notifications:** Replaced static status messages with a floating toast system for success/error feedback
+
+- **Panel UI Optimizations**
+  - Refined Split View layout with better proportions
+  - Improved form organization with grouped fields
+  - Visual polish for "Read-only" technical data section
+  - Smooth transitions between Empty State, Editor, and Library views
+
 ## [1.7.0] - 2026-01-16
 
 ### Added
@@ -43,7 +80,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All component data (screenshots, code, meta, semantics) included in export
 
 - **UI Enhancements**
-
   - Added view toggle navigation between Library and Capture views
   - Export button styling matches DevTools design patterns
   - Library grid items with hover effects for better UX
@@ -66,21 +102,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Database Functions**
 
   - **`openDB()`:** Initializes IndexedDB database with version management and schema creation
-    - Handles database upgrades automatically
-    - Creates object store and indexes on first run
-    - Returns cached database instance for subsequent calls
   - **`save(data)`:** Saves component records to IndexedDB with UUID key
-    - Validates that component data includes required `id` field
-    - Uses `put()` operation to support both insert and update
-    - Returns Promise that resolves with the saved record ID
   - **`getAll()`:** Retrieves all component records from the database
-    - Returns Promise that resolves to an array of all saved components
-    - Returns empty array if no components are stored
-    - Ready for use in Phase 4.3 library view
   - **`delete(id)`:** Removes a component record from the database by UUID
-    - Validates that component ID is provided
-    - Returns Promise that resolves when deletion is complete
-    - Ready for use in Phase 4.3 library view
 
 - **Panel Integration**
 
@@ -92,7 +116,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Database wrapper loaded before panel script in `panel.html`
 
 - **Data Persistence**
-
   - Component data is now permanently stored in browser's IndexedDB
   - All captured data (screenshots, code, meta, semantics) is persisted
   - Data survives browser restarts and extension reloads
@@ -393,13 +416,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   - Created `manifest.json` with Manifest V3 specification
   - Configured `devtools_page` to point to `devtools.html`
-  - Declared required permissions:
-    - `storage` - For IndexedDB and local storage access
-    - `activeTab` - For accessing the current tab
-    - `scripting` - For content script injection
-    - `debugger` - For Chrome Debugger API access
-    - `contextMenus` - For context menu integration
-  - Configured `host_permissions` for `<all_urls>` to allow extension to work on all websites
+  - Declared required permissions: `storage`, `activeTab`, `scripting`, `debugger`, `contextMenus`
+  - Configured `host_permissions` for `<all_urls>`
   - Set up `background` service worker pointing to `src/background.js`
   - Configured `content_scripts` to inject `src/content.js` on all URLs at document idle
 
@@ -421,13 +439,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented `src/background.js` service worker as communication bridge
   - Added `chrome.runtime.onConnect` listener to handle connections from DevTools panel and content scripts
   - Implemented connection storage by `tabId` using a `Map` data structure
-  - Added message routing system to handle different message types:
-    - `DEVTOOLS_CONNECTED` - Initial connection from DevTools panel
-    - `PANEL_SHOWN` - Panel visibility state changes
-    - `PANEL_HIDDEN` - Panel visibility state changes
-    - `ELEMENT_SELECTED` - Element selection events (for future use)
-    - `CONTENT_SCRIPT_READY` - Content script initialization
-  - Implemented `onDisconnect` handler to trigger cleanup when DevTools closes (safety switch)
+  - Added message routing system to handle different message types: `DEVTOOLS_CONNECTED`, `PANEL_SHOWN`, `PANEL_HIDDEN`, `ELEMENT_SELECTED`, `CONTENT_SCRIPT_READY`
+  - Implemented `onDisconnect` handler to trigger cleanup when DevTools closes
   - Added message forwarding from content scripts to DevTools panel
   - Implemented cleanup notifications to content scripts when DevTools panel disconnects
 
