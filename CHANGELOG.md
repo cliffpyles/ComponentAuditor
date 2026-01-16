@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Phase 2.4: Context Awareness
 
 - **Framework Detection**
+
   - Implemented `detectFrameworks()` function in content script to automatically detect frameworks and libraries used on the page
   - Scans `window` object for framework indicators: `React`, `Vue`, `Angular`, `jQuery`, and `webpack`
   - Scans DOM for framework-specific attributes: `data-reactroot`, `ng-version`, `data-v-`, `v-cloak`
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Framework detection results are included in the `ELEMENT_SELECTED` message payload
 
 - **URL Parser**
+
   - Implemented `parseURL()` function in content script to parse the current page URL
   - Separates `pathname` (Route) from `search` (Query Params) using `URLSearchParams` API
   - Extracts domain name from `window.location.hostname`
@@ -63,11 +65,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Phase 2.3: Token Analysis (Computed Styles)
 
 - **Style Reader**
+
   - Implemented `extractTokens()` function in content script to extract computed styles using `window.getComputedStyle(element)`
   - Token extraction is performed automatically when an element is selected
   - Extracted tokens are included in the `ELEMENT_SELECTED` message payload
 
 - **Token Mapping**
+
   - **Color Tokens:** Extracts `color`, `background-color`, and `border-color` from computed styles
     - Filters out transparent and zero-alpha colors
     - Stores color values with their type (color, background-color, border-color)
@@ -97,17 +101,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Phase 2.2: Code & Hierarchy Extraction
 
 - **HTML Scraper**
+
   - Implemented `extractHTML()` function in content script to extract `element.outerHTML`
   - HTML is captured at the moment of element selection and included in `ELEMENT_SELECTED` message
   - Extracted HTML is stored in `window.__CA_EXTRACTED_CODE__` for use in Phase 4 editor interface
 
 - **Lineage Traversal**
+
   - Implemented `extractLineage()` function to walk up the DOM tree via `element.parentElement`
   - Captures up to 3 levels of parent ancestors
   - Each ancestor includes `tagName`, `className`, and `id` for context
   - Lineage data is included in the code extraction payload
 
 - **Sibling Analysis**
+
   - Implemented `extractSiblings()` function to capture adjacent elements
   - Extracts `previousElementSibling` and `nextElementSibling` when available
   - Each sibling includes `tagName`, `className`, `id`, and full `outerHTML`
