@@ -58,11 +58,11 @@
 
 ### 2.2 Code & Hierarchy Extraction
 
-- [ ] **HTML Scraper:** Extract `element.outerHTML`.
-- [ ] **Lineage Traversal:**
+- [x] **HTML Scraper:** Extract `element.outerHTML`.
+- [x] **Lineage Traversal:**
   - Write a loop to walk up `element.parentElement`.
   - Capture tag names and classes for up to 3 ancestors.
-- [ ] **Sibling Analysis:**
+- [x] **Sibling Analysis:**
   - Access `element.previousElementSibling` and `nextElementSibling`.
   - Capture their HTML/Tags to establish layout context.
 

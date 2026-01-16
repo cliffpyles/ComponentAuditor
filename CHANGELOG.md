@@ -5,17 +5,48 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-16
+
+### Added
+
+#### Phase 2.2: Code & Hierarchy Extraction
+
+- **HTML Scraper**
+  - Implemented `extractHTML()` function in content script to extract `element.outerHTML`
+  - HTML is captured at the moment of element selection and included in `ELEMENT_SELECTED` message
+  - Extracted HTML is stored in `window.__CA_EXTRACTED_CODE__` for use in Phase 4 editor interface
+
+- **Lineage Traversal**
+  - Implemented `extractLineage()` function to walk up the DOM tree via `element.parentElement`
+  - Captures up to 3 levels of parent ancestors
+  - Each ancestor includes `tagName`, `className`, and `id` for context
+  - Lineage data is included in the code extraction payload
+
+- **Sibling Analysis**
+  - Implemented `extractSiblings()` function to capture adjacent elements
+  - Extracts `previousElementSibling` and `nextElementSibling` when available
+  - Each sibling includes `tagName`, `className`, `id`, and full `outerHTML`
+  - Sibling data provides layout context for ML models and design analysis
+
+- **Data Integration**
+  - Updated `ELEMENT_SELECTED` message to include `code` object with HTML, lineage, and siblings
+  - Panel script now stores extracted code data alongside screenshot
+  - Status messages display extraction summary (HTML, ancestor count, sibling presence)
+  - All extracted data is stored in global variables for Phase 4 editor integration
+
 ## [1.1.1] - 2026-01-16
 
 ### Fixed
 
 - **Connection Management Issues**
+
   - Fixed critical bug where DevTools panel and content script connections were overwriting each other
   - Refactored background script to use separate connection maps: `panelConnections` and `contentConnections`
   - DevTools panel and content script can now maintain simultaneous connections for the same tab
   - Fixed issue where panel connection was lost when content script reconnected
 
 - **Message Routing**
+
   - Fixed `ELEMENT_SELECTED` messages not being forwarded to DevTools panel
   - Added proper tabId extraction from message payload, port sender, and connection map
   - Improved message routing logic to prioritize tabId from message payload
@@ -23,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Content script now includes tabId in `ELEMENT_SELECTED` messages for reliable routing
 
 - **Port Disconnection Handling**
+
   - Improved content script port reconnection logic when connection is lost
   - Added fallback to `chrome.runtime.sendMessage` when port is null or disconnected
   - Better error logging and handling for message delivery failures

@@ -218,6 +218,87 @@
   }
 
   /**
+   * Extract HTML from an element
+   * @param {Element} element - The element to extract HTML from
+   * @returns {string} - The outerHTML of the element
+   */
+  function extractHTML(element) {
+    try {
+      return element.outerHTML || "";
+    } catch (error) {
+      console.warn("Component Auditor: Error extracting HTML", error);
+      return "";
+    }
+  }
+
+  /**
+   * Extract lineage (parent ancestors) up to 3 levels
+   * @param {Element} element - The element to traverse from
+   * @returns {Array<Object>} - Array of ancestor info (tagName, className, id)
+   */
+  function extractLineage(element) {
+    const lineage = [];
+    let current = element.parentElement;
+    let level = 0;
+    const maxLevels = 3;
+
+    while (current && level < maxLevels) {
+      try {
+        lineage.push({
+          tagName: current.tagName || "",
+          className: current.className || "",
+          id: current.id || "",
+        });
+        current = current.parentElement;
+        level++;
+      } catch (error) {
+        console.warn("Component Auditor: Error extracting lineage", error);
+        break;
+      }
+    }
+
+    return lineage;
+  }
+
+  /**
+   * Extract sibling elements (previous and next)
+   * @param {Element} element - The element to get siblings for
+   * @returns {Object} - Object with previousSibling and nextSibling HTML
+   */
+  function extractSiblings(element) {
+    const siblings = {
+      previousSibling: null,
+      nextSibling: null,
+    };
+
+    try {
+      // Get previous sibling
+      if (element.previousElementSibling) {
+        siblings.previousSibling = {
+          tagName: element.previousElementSibling.tagName || "",
+          className: element.previousElementSibling.className || "",
+          id: element.previousElementSibling.id || "",
+          html: element.previousElementSibling.outerHTML || "",
+        };
+      }
+
+      // Get next sibling
+      if (element.nextElementSibling) {
+        siblings.nextSibling = {
+          tagName: element.nextElementSibling.tagName || "",
+          className: element.nextElementSibling.className || "",
+          id: element.nextElementSibling.id || "",
+          html: element.nextElementSibling.outerHTML || "",
+        };
+      }
+    } catch (error) {
+      console.warn("Component Auditor: Error extracting siblings", error);
+    }
+
+    return siblings;
+  }
+
+  /**
    * Handle click event for element selection
    */
   function handleClick(e) {
@@ -242,6 +323,11 @@
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
+    // Extract HTML, lineage, and siblings
+    const html = extractHTML(e.target);
+    const lineage = extractLineage(e.target);
+    const siblings = extractSiblings(e.target);
+
     // Prepare the selection message
     const selectionMessage = {
       type: "ELEMENT_SELECTED",
@@ -259,6 +345,11 @@
         // Also include viewport-relative coordinates for screenshot cropping
         viewportX: rect.left,
         viewportY: rect.top,
+      },
+      code: {
+        html: html,
+        lineage: lineage,
+        siblings: siblings,
       },
     };
 

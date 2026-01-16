@@ -199,11 +199,13 @@
     // Stop selection mode
     stopSelectionMode();
 
-    // Store element info and rect for later use
+    // Store element info, rect, and code data for later use
     const elementInfo = message.element;
     const elementRect = message.rect;
+    const codeData = message.code || {};
 
     console.log('Element selected:', elementInfo, elementRect);
+    console.log('Code data extracted:', codeData);
 
     // Request screenshot from background script
     if (port && tabId) {
@@ -215,7 +217,8 @@
       // Store element info temporarily for when screenshot arrives
       window.__CA_PENDING_ELEMENT__ = {
         element: elementInfo,
-        rect: elementRect
+        rect: elementRect,
+        code: codeData
       };
     } else {
       console.error('Panel: Cannot request screenshot - port or tabId not available');
@@ -249,12 +252,25 @@
       .then(function(croppedDataUrl) {
         console.log('Panel: Screenshot cropped successfully');
         
-        // Store the cropped screenshot (will be used in Phase 4 for the editor)
+        // Store the cropped screenshot and code data (will be used in Phase 4 for the editor)
         window.__CA_CROPPED_SCREENSHOT__ = croppedDataUrl;
+        window.__CA_EXTRACTED_CODE__ = pendingElement.code || {};
         
         if (statusMessage) {
           const element = pendingElement.element;
-          statusMessage.textContent = `Element captured: ${element.tagName}${element.className ? '.' + element.className.split(' ')[0] : ''}${element.id ? '#' + element.id : ''}`;
+          const codeData = pendingElement.code || {};
+          const hasLineage = codeData.lineage && codeData.lineage.length > 0;
+          const hasSiblings = codeData.siblings && (codeData.siblings.previousSibling || codeData.siblings.nextSibling);
+          const codeInfo = [];
+          if (codeData.html) codeInfo.push('HTML');
+          if (hasLineage) codeInfo.push(`${codeData.lineage.length} ancestors`);
+          if (hasSiblings) codeInfo.push('siblings');
+          
+          let statusText = `Element captured: ${element.tagName}${element.className ? '.' + element.className.split(' ')[0] : ''}${element.id ? '#' + element.id : ''}`;
+          if (codeInfo.length > 0) {
+            statusText += ` (${codeInfo.join(', ')})`;
+          }
+          statusMessage.textContent = statusText;
         }
 
         // Clean up pending element
