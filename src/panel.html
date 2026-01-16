@@ -4,41 +4,46 @@
   <meta charset="UTF-8">
   <title>Component Lab</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+    
     body {
       margin: 0;
-      padding: 16px;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       font-size: 13px;
       color: #333;
       background: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
     }
     
     h1 {
-      font-size: 18px;
-      margin: 0 0 16px 0;
+      font-size: 16px;
+      margin: 0;
       font-weight: 600;
     }
     
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: #666;
-    }
-    
-    .empty-state p {
-      margin: 8px 0;
-    }
-    
     .select-btn {
-      padding: 8px 16px;
-      font-size: 13px;
+      padding: 6px 12px;
+      font-size: 12px;
       font-weight: 500;
       color: #fff;
       background-color: #4285f4;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin: 16px 0;
       transition: background-color 0.2s;
     }
     
@@ -58,20 +63,353 @@
       background-color: #d33b2c;
     }
     
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: #666;
+      text-align: center;
+    }
+    
+    .empty-state p {
+      margin: 8px 0;
+    }
+    
     .status-message {
       margin-top: 8px;
       font-size: 12px;
       color: #666;
       min-height: 16px;
     }
+    
+    /* Editor View - Split Layout */
+    .editor-container {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+      flex-direction: row;
+    }
+    
+    .editor-container.active {
+      display: flex;
+    }
+    
+    .editor-left {
+      width: 50%;
+      border-right: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .editor-right {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .editor-section {
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .editor-section:last-child {
+      border-bottom: none;
+    }
+    
+    .editor-section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    
+    /* Screenshot Section */
+    .screenshot-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+      padding: 16px;
+      overflow: auto;
+    }
+    
+    .screenshot-container img {
+      max-width: 100%;
+      max-height: 100%;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Code Section */
+    .code-viewer {
+      max-height: 200px;
+      overflow: auto;
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 12px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    /* Form Section */
+    .form-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 6px;
+    }
+    
+    .form-label.required::after {
+      content: ' *';
+      color: #ea4335;
+    }
+    
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: #4285f4;
+    }
+    
+    .form-input[readonly] {
+      background-color: #f5f5f5;
+      color: #666;
+      cursor: not-allowed;
+    }
+    
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+    }
+    
+    .form-select {
+      cursor: pointer;
+    }
+    
+    .form-actions {
+      padding: 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .btn-primary {
+      background-color: #4285f4;
+      color: #fff;
+    }
+    
+    .btn-primary:hover {
+      background-color: #3367d6;
+    }
+    
+    .btn-primary:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background-color: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #e8e8e8;
+    }
+    
+    .form-error {
+      font-size: 11px;
+      color: #ea4335;
+      margin-top: 4px;
+      display: none;
+    }
+    
+    .form-error.show {
+      display: block;
+    }
+    
+    .readonly-group {
+      background-color: #f9f9f9;
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .readonly-value {
+      font-size: 12px;
+      color: #666;
+      margin: 4px 0;
+    }
+    
+    .readonly-label {
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
-  <h1>Component Lab</h1>
-  <div class="empty-state">
-    <p>Component Auditor is ready.</p>
+  <div class="header">
+    <h1>Component Lab</h1>
     <button id="select-component-btn" class="select-btn">Select Component</button>
+  </div>
+  
+  <div class="empty-state" id="empty-state">
+    <p>Component Auditor is ready.</p>
     <p id="status-message" class="status-message"></p>
+  </div>
+  
+  <div class="editor-container" id="editor-container">
+    <div class="editor-left">
+      <div class="editor-section">
+        <div class="editor-section-title">Screenshot</div>
+        <div class="screenshot-container">
+          <img id="screenshot-img" src="" alt="Component Screenshot">
+        </div>
+      </div>
+      <div class="editor-section">
+        <div class="editor-section-title">HTML Code</div>
+        <div class="code-viewer" id="code-viewer"></div>
+      </div>
+    </div>
+    
+    <div class="editor-right">
+      <div class="form-container">
+        <form id="component-form">
+          <!-- Read-only Technical Data -->
+          <div class="form-group">
+            <div class="editor-section-title">Technical Data</div>
+            <div class="readonly-group">
+              <div class="readonly-value">
+                <span class="readonly-label">Size:</span>
+                <span id="readonly-size">-</span>
+              </div>
+              <div class="readonly-value">
+                <span class="readonly-label">Font:</span>
+                <span id="readonly-font">-</span>
+              </div>
+              <div class="readonly-value">
+                <span class="readonly-label">URL:</span>
+                <span id="readonly-url">-</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Editable Semantic Fields -->
+          <div class="form-group">
+            <label for="atomic-level" class="form-label required">Atomic Level</label>
+            <select id="atomic-level" class="form-select" required>
+              <option value="">Select atomic level...</option>
+              <option value="Atom">Atom</option>
+              <option value="Molecule">Molecule</option>
+              <option value="Organism">Organism</option>
+              <option value="Template">Template</option>
+              <option value="Page">Page</option>
+            </select>
+            <div class="form-error" id="atomic-level-error">Atomic Level is required</div>
+          </div>
+          
+          <div class="form-group">
+            <label for="design-pattern" class="form-label">Design Pattern</label>
+            <select id="design-pattern" class="form-select">
+              <option value="">Select design pattern...</option>
+              <option value="Card">Card</option>
+              <option value="Master-Detail">Master-Detail</option>
+              <option value="List">List</option>
+              <option value="Grid">Grid</option>
+              <option value="Form">Form</option>
+              <option value="Modal">Modal</option>
+              <option value="Navigation">Navigation</option>
+              <option value="Header">Header</option>
+              <option value="Footer">Footer</option>
+              <option value="Sidebar">Sidebar</option>
+              <option value="Breadcrumb">Breadcrumb</option>
+              <option value="Pagination">Pagination</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="interaction-pattern" class="form-label">Interaction Pattern</label>
+            <select id="interaction-pattern" class="form-select">
+              <option value="">Select interaction pattern...</option>
+              <option value="Click">Click</option>
+              <option value="Hover">Hover</option>
+              <option value="Hover Reveal">Hover Reveal</option>
+              <option value="Drag-and-Drop">Drag-and-Drop</option>
+              <option value="Infinite Scroll">Infinite Scroll</option>
+              <option value="Modal Workflow">Modal Workflow</option>
+              <option value="Form Submission">Form Submission</option>
+              <option value="Toggle">Toggle</option>
+              <option value="Expand/Collapse">Expand/Collapse</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="notes" class="form-label">Notes</label>
+            <textarea id="notes" class="form-textarea" placeholder="Add any additional notes about this component..."></textarea>
+          </div>
+        </form>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="save-btn" class="btn btn-primary">Save Component</button>
+      </div>
+    </div>
   </div>
   
   <script src="panel.js"></script>

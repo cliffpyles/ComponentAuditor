@@ -119,11 +119,11 @@
 
 ### 4.1 The Editor Panel
 
-- [ ] **UI Layout:** Split view (Left: Screenshot/Code, Right: Form).
-- [ ] **Form Inputs:**
+- [x] **UI Layout:** Split view (Left: Screenshot/Code, Right: Form).
+- [x] **Form Inputs:**
   - **Read-only:** Technical data (Size, Font, URL).
   - **Editable:** "Atomic Level", "Design Pattern" (Dropdown), "Interaction Pattern" (Dropdown), "Notes".
-- [ ] **Validation:** Ensure critical fields are not empty before save.
+- [x] **Validation:** Ensure critical fields are not empty before save.
 
 ### 4.2 Storage Layer (IndexedDB)
 

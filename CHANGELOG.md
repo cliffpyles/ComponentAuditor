@@ -5,6 +5,57 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-16
+
+### Added
+
+#### Phase 4.1: The Editor Panel
+
+- **Split View UI Layout**
+
+  - Implemented split-view editor interface with left and right panels
+  - Left panel displays component screenshot and HTML code viewer
+  - Right panel contains the component data form
+  - Editor automatically appears after element selection and screenshot capture
+  - Smooth transition between empty state and editor view
+
+- **Form Inputs**
+
+  - **Read-only Technical Data Section:**
+    - Displays component size (width × height in pixels)
+    - Shows font information (family and size) extracted from computed styles
+    - Displays current page URL (domain + route)
+    - Read-only fields are visually distinct with gray background
+  - **Editable Semantic Fields:**
+    - **Atomic Level:** Required dropdown with options (Atom, Molecule, Organism, Template, Page)
+    - **Design Pattern:** Optional dropdown with common patterns (Card, Master-Detail, List, Grid, Form, Modal, Navigation, Header, Footer, Sidebar, Breadcrumb, Pagination, Other)
+    - **Interaction Pattern:** Optional dropdown with interaction types (Click, Hover, Hover Reveal, Drag-and-Drop, Infinite Scroll, Modal Workflow, Form Submission, Toggle, Expand/Collapse, Other)
+    - **Notes:** Optional textarea for additional component annotations
+
+- **Form Validation**
+
+  - Implemented validation for required fields (Atomic Level)
+  - Real-time field validation with visual feedback (red border for invalid fields)
+  - Error messages displayed below invalid fields
+  - Save button is disabled until all required fields are valid
+  - Form validation prevents saving incomplete component data
+
+- **Editor Functionality**
+
+  - Automatic form population with extracted component data
+  - Screenshot display in left panel with proper scaling
+  - HTML code viewer with truncation for very long HTML (5000+ characters)
+  - Cancel button to return to empty state and discard changes
+  - Save button prepares component data object (save to IndexedDB will be implemented in Phase 4.2)
+  - Component data object includes all captured dimensions, code, meta, and semantic information
+
+- **UI Enhancements**
+  - Modern, clean interface matching DevTools design patterns
+  - Responsive layout that adapts to panel size
+  - Scrollable sections for long content
+  - Visual separation between sections with borders
+  - Consistent styling with existing panel design
+
 ## [1.4.1] - 2026-01-16
 
 ### Fixed

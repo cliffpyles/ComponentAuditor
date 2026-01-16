@@ -255,34 +255,15 @@
       .then(function(croppedDataUrl) {
         console.log('Panel: Screenshot cropped successfully');
         
-        // Store the cropped screenshot, code data, and meta data (will be used in Phase 4 for the editor)
+        // Store the cropped screenshot, code data, and meta data
         window.__CA_CROPPED_SCREENSHOT__ = croppedDataUrl;
         window.__CA_EXTRACTED_CODE__ = pendingElement.code || {};
         window.__CA_EXTRACTED_META__ = pendingElement.meta || {};
+        window.__CA_ELEMENT_RECT__ = pendingElement.rect || {};
+        window.__CA_ELEMENT_INFO__ = pendingElement.element || {};
         
-        if (statusMessage) {
-          const element = pendingElement.element;
-          const codeData = pendingElement.code || {};
-          const metaData = pendingElement.meta || {};
-          const hasLineage = codeData.lineage && codeData.lineage.length > 0;
-          const hasSiblings = codeData.siblings && (codeData.siblings.previousSibling || codeData.siblings.nextSibling);
-          const tokens = codeData.tokens || {};
-          const hasTokens = tokens.colors || tokens.fonts || tokens.spacing || tokens.border || tokens.shadows;
-          const frameworks = metaData.frameworks || [];
-          
-          const codeInfo = [];
-          if (codeData.html) codeInfo.push('HTML');
-          if (hasLineage) codeInfo.push(`${codeData.lineage.length} ancestors`);
-          if (hasSiblings) codeInfo.push('siblings');
-          if (hasTokens) codeInfo.push('tokens');
-          if (frameworks.length > 0) codeInfo.push(`${frameworks.length} framework(s)`);
-          
-          let statusText = `Element captured: ${element.tagName}${element.className ? '.' + element.className.split(' ')[0] : ''}${element.id ? '#' + element.id : ''}`;
-          if (codeInfo.length > 0) {
-            statusText += ` (${codeInfo.join(', ')})`;
-          }
-          statusMessage.textContent = statusText;
-        }
+        // Show the editor with populated data
+        showEditor();
 
         // Clean up pending element
         delete window.__CA_PENDING_ELEMENT__;
@@ -310,6 +291,302 @@
 
     // Clean up pending element
     delete window.__CA_PENDING_ELEMENT__;
+  }
+
+  /**
+   * Show the editor panel with captured component data
+   */
+  function showEditor() {
+    const emptyState = document.getElementById('empty-state');
+    const editorContainer = document.getElementById('editor-container');
+    
+    if (!emptyState || !editorContainer) {
+      console.error('Panel: Editor elements not found');
+      return;
+    }
+    
+    // Hide empty state and show editor
+    emptyState.style.display = 'none';
+    editorContainer.classList.add('active');
+    
+    // Populate the editor with captured data
+    populateEditor();
+    
+    // Setup form event handlers
+    setupFormHandlers();
+  }
+
+  /**
+   * Hide the editor and return to empty state
+   */
+  function hideEditor() {
+    const emptyState = document.getElementById('empty-state');
+    const editorContainer = document.getElementById('editor-container');
+    
+    if (!emptyState || !editorContainer) {
+      return;
+    }
+    
+    // Show empty state and hide editor
+    emptyState.style.display = 'flex';
+    editorContainer.classList.remove('active');
+    
+    // Reset form
+    const form = document.getElementById('component-form');
+    if (form) {
+      form.reset();
+    }
+    
+    // Clear stored data
+    delete window.__CA_CROPPED_SCREENSHOT__;
+    delete window.__CA_EXTRACTED_CODE__;
+    delete window.__CA_EXTRACTED_META__;
+    delete window.__CA_ELEMENT_RECT__;
+    delete window.__CA_ELEMENT_INFO__;
+  }
+
+  /**
+   * Populate the editor with captured component data
+   */
+  function populateEditor() {
+    const screenshotImg = document.getElementById('screenshot-img');
+    const codeViewer = document.getElementById('code-viewer');
+    const readonlySize = document.getElementById('readonly-size');
+    const readonlyFont = document.getElementById('readonly-font');
+    const readonlyUrl = document.getElementById('readonly-url');
+    
+    const croppedScreenshot = window.__CA_CROPPED_SCREENSHOT__;
+    const codeData = window.__CA_EXTRACTED_CODE__ || {};
+    const metaData = window.__CA_EXTRACTED_META__ || {};
+    const elementRect = window.__CA_ELEMENT_RECT__ || {};
+    const elementInfo = window.__CA_ELEMENT_INFO__ || {};
+    
+    // Populate screenshot
+    if (screenshotImg && croppedScreenshot) {
+      screenshotImg.src = croppedScreenshot;
+      screenshotImg.alt = 'Component Screenshot';
+    }
+    
+    // Populate code viewer
+    if (codeViewer) {
+      const html = codeData.html || '';
+      // Truncate very long HTML for display
+      if (html.length > 5000) {
+        codeViewer.textContent = html.substring(0, 5000) + '\n\n... (truncated)';
+      } else {
+        codeViewer.textContent = html || 'No HTML available';
+      }
+    }
+    
+    // Populate read-only technical data
+    if (readonlySize) {
+      const width = elementRect.width || 0;
+      const height = elementRect.height || 0;
+      readonlySize.textContent = `${Math.round(width)} × ${Math.round(height)}px`;
+    }
+    
+    if (readonlyFont) {
+      const tokens = codeData.tokens || {};
+      const fonts = tokens.fonts || [];
+      if (fonts.length > 0) {
+        // Extract font-family and font-size from tokens
+        const fontFamily = fonts.find(f => f.type === 'font-family')?.value || '';
+        const fontSize = fonts.find(f => f.type === 'font-size')?.value || '';
+        
+        if (fontFamily && fontSize) {
+          readonlyFont.textContent = `${fontFamily} ${fontSize}`;
+        } else if (fontFamily) {
+          readonlyFont.textContent = fontFamily;
+        } else if (fontSize) {
+          readonlyFont.textContent = `Size: ${fontSize}`;
+        } else {
+          readonlyFont.textContent = 'N/A';
+        }
+      } else {
+        readonlyFont.textContent = 'N/A';
+      }
+    }
+    
+    if (readonlyUrl) {
+      const route = metaData.route || '';
+      const domain = metaData.domain || '';
+      const fullUrl = domain + route;
+      readonlyUrl.textContent = fullUrl || 'N/A';
+    }
+  }
+
+  /**
+   * Setup form event handlers
+   */
+  function setupFormHandlers() {
+    const saveBtn = document.getElementById('save-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const atomicLevelSelect = document.getElementById('atomic-level');
+    
+    // Handle cancel button
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function() {
+        hideEditor();
+      });
+    }
+    
+    // Handle save button
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function() {
+        handleSave();
+      });
+    }
+    
+    // Handle form validation on change
+    if (atomicLevelSelect) {
+      atomicLevelSelect.addEventListener('change', function() {
+        validateField('atomic-level');
+      });
+    }
+  }
+
+  /**
+   * Validate a specific form field
+   * @param {string} fieldId - The ID of the field to validate
+   * @returns {boolean} - True if valid, false otherwise
+   */
+  function validateField(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorElement = document.getElementById(fieldId + '-error');
+    
+    if (!field) {
+      return true;
+    }
+    
+    let isValid = true;
+    
+    // Check required fields
+    if (field.hasAttribute('required')) {
+      const value = field.value.trim();
+      isValid = value !== '';
+    }
+    
+    // Show/hide error message
+    if (errorElement) {
+      if (isValid) {
+        errorElement.classList.remove('show');
+      } else {
+        errorElement.classList.add('show');
+      }
+    }
+    
+    // Update field styling
+    if (isValid) {
+      field.style.borderColor = '#ddd';
+    } else {
+      field.style.borderColor = '#ea4335';
+    }
+    
+    return isValid;
+  }
+
+  /**
+   * Validate the entire form
+   * @returns {boolean} - True if form is valid, false otherwise
+   */
+  function validateForm() {
+    const atomicLevel = document.getElementById('atomic-level');
+    
+    let isValid = true;
+    
+    // Validate required fields
+    if (atomicLevel && atomicLevel.hasAttribute('required')) {
+      if (!validateField('atomic-level')) {
+        isValid = false;
+      }
+    }
+    
+    return isValid;
+  }
+
+  /**
+   * Handle save button click
+   */
+  function handleSave() {
+    // Validate form
+    if (!validateForm()) {
+      console.log('Panel: Form validation failed');
+      return;
+    }
+    
+    // Get form values
+    const atomicLevel = document.getElementById('atomic-level')?.value || '';
+    const designPattern = document.getElementById('design-pattern')?.value || '';
+    const interactionPattern = document.getElementById('interaction-pattern')?.value || '';
+    const notes = document.getElementById('notes')?.value || '';
+    
+    // Prepare component data object
+    const componentData = {
+      id: generateUUID(),
+      label: generateLabel(),
+      meta: {
+        ...window.__CA_EXTRACTED_META__,
+        timestamp: new Date().toISOString()
+      },
+      visuals: {
+        screenshot_base64: window.__CA_CROPPED_SCREENSHOT__,
+        dimensions: {
+          width: window.__CA_ELEMENT_RECT__?.width || 0,
+          height: window.__CA_ELEMENT_RECT__?.height || 0
+        }
+      },
+      code: window.__CA_EXTRACTED_CODE__ || {},
+      semantics: {
+        atomic_level: atomicLevel,
+        design_pattern: designPattern || undefined,
+        interaction_pattern: interactionPattern || undefined,
+        notes: notes || undefined
+      }
+    };
+    
+    console.log('Panel: Component data prepared for save:', componentData);
+    
+    // TODO: Save to IndexedDB in Phase 4.2
+    // For now, just log the data
+    console.log('Panel: Save functionality will be implemented in Phase 4.2');
+    
+    // Show success message (temporary until Phase 4.2)
+    const statusMessage = document.getElementById('status-message');
+    if (statusMessage) {
+      statusMessage.textContent = 'Component data prepared. Save functionality coming in Phase 4.2.';
+    }
+  }
+
+  /**
+   * Generate a UUID for the component
+   * @returns {string} - UUID v4 string
+   */
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  /**
+   * Generate a label for the component based on captured data
+   * @returns {string} - Generated label
+   */
+  function generateLabel() {
+    const elementInfo = window.__CA_ELEMENT_INFO__ || {};
+    const tagName = elementInfo.tagName || 'element';
+    const className = elementInfo.className ? elementInfo.className.split(' ')[0] : '';
+    const id = elementInfo.id || '';
+    
+    let label = tagName.toLowerCase();
+    if (id) {
+      label += '-' + id;
+    } else if (className) {
+      label += '-' + className;
+    }
+    
+    return label;
   }
 
   /**
