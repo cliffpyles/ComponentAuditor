@@ -10,8 +10,8 @@
 
 ### 1.1 Project Initialization
 
-- [ ] **Scaffold Structure:** Set up the directory structure (`src/`, `assets/`, `_locales/`).
-- [ ] **Manifest V3 Configuration:**
+- [x] **Scaffold Structure:** Set up the directory structure (`src/`, `assets/`, `_locales/`).
+- [x] **Manifest V3 Configuration:**
   - Define `manifest.json`.
   - Register `devtools_page`.
   - Declare permissions: `storage`, `activeTab`, `scripting`, `debugger`, `contextMenus`.

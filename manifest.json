@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Component Auditor",
+  "version": "1.0.0",
+  "description": "A specialized browser extension for creating high-fidelity UI datasets by capturing and analyzing web components.",
+  "devtools_page": "devtools.html",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "debugger",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
