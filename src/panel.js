@@ -546,14 +546,45 @@
     
     console.log('Panel: Component data prepared for save:', componentData);
     
-    // TODO: Save to IndexedDB in Phase 4.2
-    // For now, just log the data
-    console.log('Panel: Save functionality will be implemented in Phase 4.2');
-    
-    // Show success message (temporary until Phase 4.2)
-    const statusMessage = document.getElementById('status-message');
-    if (statusMessage) {
-      statusMessage.textContent = 'Component data prepared. Save functionality coming in Phase 4.2.';
+    // Save to IndexedDB
+    if (window.ComponentAuditorDB && window.ComponentAuditorDB.save) {
+      window.ComponentAuditorDB.save(componentData)
+        .then(function(id) {
+          console.log('Panel: Component saved successfully with ID:', id);
+          
+          // Show success message
+          const statusMessage = document.getElementById('status-message');
+          if (statusMessage) {
+            statusMessage.textContent = 'Component saved successfully!';
+            statusMessage.style.color = '#34a853';
+          }
+          
+          // Hide editor and return to empty state after a brief delay
+          setTimeout(function() {
+            hideEditor();
+            if (statusMessage) {
+              statusMessage.textContent = '';
+              statusMessage.style.color = '';
+            }
+          }, 1500);
+        })
+        .catch(function(error) {
+          console.error('Panel: Failed to save component', error);
+          
+          // Show error message
+          const statusMessage = document.getElementById('status-message');
+          if (statusMessage) {
+            statusMessage.textContent = 'Error: Failed to save component. ' + error.message;
+            statusMessage.style.color = '#ea4335';
+          }
+        });
+    } else {
+      console.error('Panel: Database wrapper not available');
+      const statusMessage = document.getElementById('status-message');
+      if (statusMessage) {
+        statusMessage.textContent = 'Error: Database not initialized.';
+        statusMessage.style.color = '#ea4335';
+      }
     }
   }
 

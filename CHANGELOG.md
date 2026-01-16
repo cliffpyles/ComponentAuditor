@@ -5,6 +5,55 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-01-16
+
+### Added
+
+#### Phase 4.2: Storage Layer (IndexedDB)
+
+- **Database Wrapper (`db.js`)**
+
+  - Created IndexedDB database wrapper module for persistent component storage
+  - Database name: `ComponentAuditorDB` with version management
+  - Object store: `components` with UUID-based primary key
+  - Indexes created for `label` and `timestamp` for future search and sorting capabilities
+
+- **Database Functions**
+
+  - **`openDB()`:** Initializes IndexedDB database with version management and schema creation
+    - Handles database upgrades automatically
+    - Creates object store and indexes on first run
+    - Returns cached database instance for subsequent calls
+  - **`save(data)`:** Saves component records to IndexedDB with UUID key
+    - Validates that component data includes required `id` field
+    - Uses `put()` operation to support both insert and update
+    - Returns Promise that resolves with the saved record ID
+  - **`getAll()`:** Retrieves all component records from the database
+    - Returns Promise that resolves to an array of all saved components
+    - Returns empty array if no components are stored
+    - Ready for use in Phase 4.3 library view
+  - **`delete(id)`:** Removes a component record from the database by UUID
+    - Validates that component ID is provided
+    - Returns Promise that resolves when deletion is complete
+    - Ready for use in Phase 4.3 library view
+
+- **Panel Integration**
+
+  - Integrated database wrapper into panel save functionality
+  - Save button now persists component data to IndexedDB
+  - Success message displayed after successful save
+  - Error handling with user-friendly error messages
+  - Automatic editor dismissal after successful save (1.5 second delay)
+  - Database wrapper loaded before panel script in `panel.html`
+
+- **Data Persistence**
+
+  - Component data is now permanently stored in browser's IndexedDB
+  - All captured data (screenshots, code, meta, semantics) is persisted
+  - Data survives browser restarts and extension reloads
+  - Base64 screenshot data stored efficiently in IndexedDB
+  - Component records include UUID, label, meta, visuals, code, and semantics
+
 ## [1.5.0] - 2026-01-16
 
 ### Added

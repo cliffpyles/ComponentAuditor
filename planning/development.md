@@ -127,7 +127,7 @@
 
 ### 4.2 Storage Layer (IndexedDB)
 
-- [ ] **Database Wrapper (`db.js`):**
+- [x] **Database Wrapper (`db.js`):**
   - `openDB()`: Version management and schema creation.
   - `save(data)`: Put record with UUID key.
   - `getAll()`: Retrieve generic list for library view.
