@@ -110,6 +110,22 @@
           }
           break;
         
+        case 'CAPTURE_SCREENSHOT':
+          // Capture screenshot of the visible tab
+          const screenshotTabId = message.tabId || getTabIdFromPort(port) || findTabIdFromConnection(port);
+          if (screenshotTabId) {
+            captureScreenshot(screenshotTabId, port);
+          } else {
+            console.error('Background: Could not determine tabId for CAPTURE_SCREENSHOT');
+            if (port) {
+              port.postMessage({
+                type: 'SCREENSHOT_ERROR',
+                error: 'Could not determine tabId'
+              });
+            }
+          }
+          break;
+        
         default:
           console.warn('Background: Unknown message type', message.type);
       }
@@ -247,6 +263,52 @@
       }
     }
     return null;
+  }
+
+  /**
+   * Capture screenshot of a tab
+   */
+  function captureScreenshot(tabId, port) {
+    console.log(`Background: Capturing screenshot for tab ${tabId}`);
+    
+    // First, get the tab to find its windowId
+    chrome.tabs.get(tabId, function(tab) {
+      if (chrome.runtime.lastError) {
+        console.error('Background: Error getting tab', chrome.runtime.lastError);
+        if (port) {
+          port.postMessage({
+            type: 'SCREENSHOT_ERROR',
+            error: chrome.runtime.lastError.message
+          });
+        }
+        return;
+      }
+
+      // Capture the visible tab in that window
+      chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, function(dataUrl) {
+        if (chrome.runtime.lastError) {
+          console.error('Background: Screenshot capture error', chrome.runtime.lastError);
+          if (port) {
+            port.postMessage({
+              type: 'SCREENSHOT_ERROR',
+              error: chrome.runtime.lastError.message
+            });
+          }
+          return;
+        }
+
+        // Send screenshot back to the requester
+        if (port) {
+          port.postMessage({
+            type: 'SCREENSHOT_CAPTURED',
+            dataUrl: dataUrl,
+            tabId: tabId
+          });
+        } else {
+          console.error('Background: No port available to send screenshot');
+        }
+      });
+    });
   }
 
   /**

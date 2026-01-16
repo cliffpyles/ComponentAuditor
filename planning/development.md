@@ -47,10 +47,10 @@
 
 ### 2.1 Visual Capture
 
-- [ ] **Screenshot Pipeline:**
+- [x] **Screenshot Pipeline:**
   - DevTools requests capture -> Background runs `chrome.tabs.captureVisibleTab`.
   - Send Base64 image back to Panel.
-- [ ] **Cropping Engine:**
+- [x] **Cropping Engine:**
   - Create an off-screen HTML5 `<canvas>`.
   - Load the Base64 image.
   - Draw only the slice defined by the element's `rect` (x, y, width, height).

@@ -77,6 +77,14 @@
         handleElementSelected(message);
         break;
       
+      case 'SCREENSHOT_CAPTURED':
+        handleScreenshotCaptured(message);
+        break;
+      
+      case 'SCREENSHOT_ERROR':
+        handleScreenshotError(message);
+        break;
+      
       default:
         console.log('Panel: Unhandled message type', message.type);
     }
@@ -185,14 +193,165 @@
     const statusMessage = document.getElementById('status-message');
     
     if (statusMessage) {
-      statusMessage.textContent = `Element selected: ${message.element.tagName}${message.element.className ? '.' + message.element.className.split(' ')[0] : ''}${message.element.id ? '#' + message.element.id : ''}`;
+      statusMessage.textContent = `Element selected. Capturing screenshot...`;
     }
 
     // Stop selection mode
     stopSelectionMode();
 
-    // TODO: In Phase 4, this will trigger the extraction and editor UI
-    console.log('Element selected:', message.element);
+    // Store element info and rect for later use
+    const elementInfo = message.element;
+    const elementRect = message.rect;
+
+    console.log('Element selected:', elementInfo, elementRect);
+
+    // Request screenshot from background script
+    if (port && tabId) {
+      port.postMessage({
+        type: 'CAPTURE_SCREENSHOT',
+        tabId: tabId
+      });
+      
+      // Store element info temporarily for when screenshot arrives
+      window.__CA_PENDING_ELEMENT__ = {
+        element: elementInfo,
+        rect: elementRect
+      };
+    } else {
+      console.error('Panel: Cannot request screenshot - port or tabId not available');
+      if (statusMessage) {
+        statusMessage.textContent = 'Error: Could not capture screenshot.';
+      }
+    }
+  }
+
+  /**
+   * Handle screenshot capture completion
+   */
+  function handleScreenshotCaptured(message) {
+    const statusMessage = document.getElementById('status-message');
+    const pendingElement = window.__CA_PENDING_ELEMENT__;
+    
+    if (!pendingElement) {
+      console.error('Panel: Received screenshot but no pending element info');
+      if (statusMessage) {
+        statusMessage.textContent = 'Error: Screenshot captured but element info missing.';
+      }
+      return;
+    }
+
+    if (statusMessage) {
+      statusMessage.textContent = 'Cropping screenshot...';
+    }
+
+    // Crop the screenshot to the element's bounds
+    cropScreenshot(message.dataUrl, pendingElement.rect)
+      .then(function(croppedDataUrl) {
+        console.log('Panel: Screenshot cropped successfully');
+        
+        // Store the cropped screenshot (will be used in Phase 4 for the editor)
+        window.__CA_CROPPED_SCREENSHOT__ = croppedDataUrl;
+        
+        if (statusMessage) {
+          const element = pendingElement.element;
+          statusMessage.textContent = `Element captured: ${element.tagName}${element.className ? '.' + element.className.split(' ')[0] : ''}${element.id ? '#' + element.id : ''}`;
+        }
+
+        // Clean up pending element
+        delete window.__CA_PENDING_ELEMENT__;
+      })
+      .catch(function(error) {
+        console.error('Panel: Error cropping screenshot', error);
+        if (statusMessage) {
+          statusMessage.textContent = 'Error: Could not crop screenshot.';
+        }
+        delete window.__CA_PENDING_ELEMENT__;
+      });
+  }
+
+  /**
+   * Handle screenshot capture error
+   */
+  function handleScreenshotError(message) {
+    const statusMessage = document.getElementById('status-message');
+    
+    console.error('Panel: Screenshot error', message.error);
+    
+    if (statusMessage) {
+      statusMessage.textContent = `Error: ${message.error}`;
+    }
+
+    // Clean up pending element
+    delete window.__CA_PENDING_ELEMENT__;
+  }
+
+  /**
+   * Crop screenshot to element bounds using HTML5 Canvas
+   * @param {string} dataUrl - Base64 data URL of the full screenshot
+   * @param {Object} rect - Element bounding rectangle with x, y, width, height, viewportX, viewportY
+   * @returns {Promise<string>} - Promise that resolves to cropped Base64 data URL
+   */
+  function cropScreenshot(dataUrl, rect) {
+    return new Promise(function(resolve, reject) {
+      try {
+        // Create an image element to load the screenshot
+        const img = new Image();
+        
+        img.onload = function() {
+          try {
+            // Get device pixel ratio to account for high-DPI displays
+            // Screenshots are captured at device pixel ratio, so we need to scale coordinates
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            
+            // Calculate crop coordinates
+            // Screenshot is captured at device pixel ratio, so we need to scale the viewport coordinates
+            const cropX = rect.viewportX * devicePixelRatio;
+            const cropY = rect.viewportY * devicePixelRatio;
+            const cropWidth = rect.width * devicePixelRatio;
+            const cropHeight = rect.height * devicePixelRatio;
+
+            // Ensure crop dimensions don't exceed image dimensions
+            const actualCropX = Math.max(0, Math.min(cropX, img.width));
+            const actualCropY = Math.max(0, Math.min(cropY, img.height));
+            const actualCropWidth = Math.min(cropWidth, img.width - actualCropX);
+            const actualCropHeight = Math.min(cropHeight, img.height - actualCropY);
+
+            // Create canvas for cropping
+            const canvas = document.createElement('canvas');
+            canvas.width = actualCropWidth;
+            canvas.height = actualCropHeight;
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              reject(new Error('Could not get canvas context'));
+              return;
+            }
+
+            // Draw the cropped portion of the image
+            ctx.drawImage(
+              img,
+              actualCropX, actualCropY, actualCropWidth, actualCropHeight,  // Source rectangle
+              0, 0, actualCropWidth, actualCropHeight  // Destination rectangle
+            );
+
+            // Export as Base64 PNG
+            const croppedDataUrl = canvas.toDataURL('image/png');
+            resolve(croppedDataUrl);
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        img.onerror = function() {
+          reject(new Error('Failed to load screenshot image'));
+        };
+
+        // Load the image
+        img.src = dataUrl;
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   // Initialize when DOM is ready
