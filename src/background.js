@@ -82,22 +82,32 @@
           break;
         
         case 'CONTENT_SCRIPT_READY':
-          // Content script is ready, acknowledge
-          senderPort.postMessage({ type: 'CONTENT_SCRIPT_ACK' });
+          // Content script is ready (no action needed)
+          console.log('Background: Content script ready');
           break;
         
         case 'START_SELECTION':
           // Forward start selection message to content script
-          forwardToContentScript(message.tabId || getTabIdFromPort(senderPort), {
-            type: 'START_SELECTION'
-          });
+          const startTabId = message.tabId || getTabIdFromPort(port) || findTabIdFromConnection(port);
+          if (startTabId) {
+            forwardToContentScript(startTabId, {
+              type: 'START_SELECTION'
+            });
+          } else {
+            console.error('Background: Could not determine tabId for START_SELECTION');
+          }
           break;
         
         case 'STOP_SELECTION':
           // Forward stop selection message to content script
-          forwardToContentScript(message.tabId || getTabIdFromPort(senderPort), {
-            type: 'STOP_SELECTION'
-          });
+          const stopTabId = message.tabId || getTabIdFromPort(port) || findTabIdFromConnection(port);
+          if (stopTabId) {
+            forwardToContentScript(stopTabId, {
+              type: 'STOP_SELECTION'
+            });
+          } else {
+            console.error('Background: Could not determine tabId for STOP_SELECTION');
+          }
           break;
         
         default:
@@ -128,9 +138,13 @@
 
   /**
    * Store a connection by tabId
+   * If a connection already exists for this tabId, it will be replaced
    */
   function storeConnection(tabId, port) {
-    if (tabId && !connections.has(tabId)) {
+    if (tabId) {
+      if (connections.has(tabId)) {
+        console.log(`Background: Replacing existing connection for tab ${tabId}`);
+      }
       connections.set(tabId, port);
       console.log(`Background: Stored connection for tab ${tabId}`);
     }
@@ -219,6 +233,18 @@
   function getTabIdFromPort(port) {
     if (port && port.sender && port.sender.tab) {
       return port.sender.tab.id;
+    }
+    return null;
+  }
+
+  /**
+   * Find tabId by looking up which connection this port belongs to
+   */
+  function findTabIdFromConnection(port) {
+    for (const [tabId, storedPort] of connections.entries()) {
+      if (storedPort === port && typeof tabId === 'number') {
+        return tabId;
+      }
     }
     return null;
   }

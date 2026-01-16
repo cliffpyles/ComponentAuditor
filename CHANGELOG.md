@@ -5,6 +5,40 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-16
+
+### Fixed
+
+- **Panel Connection Issues**
+  - Fixed "No port or tabId available" error when clicking "Select Component" button
+  - Resolved issue where `panel.js` tried to access `window.devToolsPort` and `window.devToolsTabId` from parent window context
+  - Updated `panel.js` to create its own connection to background script instead of relying on parent window variables
+  - Panel now gets `tabId` directly from `chrome.devtools.inspectedWindow.tabId` API
+
+- **Message Routing**
+  - Fixed message routing from panel to content script by routing through background script instead of direct `chrome.tabs.sendMessage` calls
+  - Updated `panel.js` to use port connection for sending `START_SELECTION` and `STOP_SELECTION` messages
+  - Improved `background.js` to handle connection storage and replacement when multiple connections exist for same tabId
+  - Added `findTabIdFromConnection()` helper function to reliably look up tabId from stored connections
+
+- **Visual Selection Features**
+  - Fixed cursor not changing to crosshair during selection mode
+  - Implemented cursor style using injected `<style>` element with `!important` flag to override page styles
+  - Added proper cleanup of cursor style element when selection mode is disabled
+  - Improved overlay creation with better error handling and body existence checks
+  - Enhanced overlay update logic to handle cases where overlay cannot be created
+
+- **Message Handling**
+  - Removed unnecessary `CONTENT_SCRIPT_ACK` message that was causing "Unknown message type" errors
+  - Added better error handling and logging throughout message flow
+  - Improved content script message handling with validation and debug logging
+  - Enhanced background script message routing with better error messages
+
+- **Connection Management**
+  - Updated `storeConnection()` to replace existing connections instead of ignoring new ones
+  - Fixed issue where new DevTools panel connections would be ignored if connection already existed for tabId
+  - Improved connection cleanup and disconnection handling
+
 ## [1.0.0] - 2026-01-16
 
 ### Added

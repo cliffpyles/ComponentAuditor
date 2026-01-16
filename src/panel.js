@@ -16,9 +16,30 @@
    * Initialize the panel UI
    */
   function init() {
-    // Get port and tabId from devtools.js
-    port = window.devToolsPort;
-    tabId = window.devToolsTabId;
+    // Get the inspected window's tab ID (available in DevTools panel context)
+    tabId = chrome.devtools.inspectedWindow.tabId;
+    
+    // Establish connection to background script
+    port = chrome.runtime.connect({
+      name: 'devtools-panel'
+    });
+
+    // Send tabId in first message to background
+    port.postMessage({
+      type: 'DEVTOOLS_CONNECTED',
+      tabId: tabId
+    });
+
+    // Handle messages from background script
+    port.onMessage.addListener(function(message) {
+      handleMessage(message);
+    });
+
+    // Handle disconnection
+    port.onDisconnect.addListener(function() {
+      console.log('Panel: Disconnected from background');
+      port = null;
+    });
 
     // Get UI elements
     const selectBtn = document.getElementById('select-component-btn');
@@ -34,7 +55,7 @@
       toggleSelectionMode();
     });
 
-    // Listen for messages from devtools.js
+    // Listen for messages from devtools.js (if needed for future features)
     window.addEventListener('message', function(event) {
       // Only accept messages from our extension
       if (event.data && event.data.type) {
@@ -42,14 +63,7 @@
       }
     });
 
-    // Listen for messages from port (background script)
-    if (port) {
-      port.onMessage.addListener(function(message) {
-        handleMessage(message);
-      });
-    }
-
-    console.log('Component Auditor panel UI initialized');
+    console.log('Component Auditor panel UI initialized', { tabId, port: !!port });
   }
 
   /**
@@ -103,20 +117,35 @@
     }
 
     // Send message to background script to start selection
-    if (port && tabId) {
-      chrome.tabs.sendMessage(tabId, {
-        type: 'START_SELECTION'
-      }).catch(err => {
-        console.error('Panel: Could not send START_SELECTION message', err);
-        if (statusMessage) {
-          statusMessage.textContent = 'Error: Could not start selection mode.';
-        }
-        isSelectionMode = false;
-        if (selectBtn) {
-          selectBtn.textContent = 'Select Component';
-          selectBtn.classList.remove('active');
-        }
+    if (!port) {
+      console.error('Panel: Port not initialized. Reinitializing...');
+      // Try to reinitialize
+      tabId = chrome.devtools.inspectedWindow.tabId;
+      port = chrome.runtime.connect({ name: 'devtools-panel' });
+      port.postMessage({
+        type: 'DEVTOOLS_CONNECTED',
+        tabId: tabId
       });
+      port.onMessage.addListener(function(message) {
+        handleMessage(message);
+      });
+    }
+    
+    if (port && tabId) {
+      port.postMessage({
+        type: 'START_SELECTION',
+        tabId: tabId
+      });
+    } else {
+      console.error('Panel: No port or tabId available', { port: !!port, tabId });
+      if (statusMessage) {
+        statusMessage.textContent = 'Error: Could not start selection mode. Please reload the page.';
+      }
+      isSelectionMode = false;
+      if (selectBtn) {
+        selectBtn.textContent = 'Select Component';
+        selectBtn.classList.remove('active');
+      }
     }
   }
 
@@ -140,11 +169,12 @@
 
     // Send message to background script to stop selection
     if (port && tabId) {
-      chrome.tabs.sendMessage(tabId, {
-        type: 'STOP_SELECTION'
-      }).catch(err => {
-        console.warn('Panel: Could not send STOP_SELECTION message', err);
+      port.postMessage({
+        type: 'STOP_SELECTION',
+        tabId: tabId
       });
+    } else {
+      console.warn('Panel: Could not send STOP_SELECTION - port or tabId not available');
     }
   }
 

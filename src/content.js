@@ -26,10 +26,9 @@
       name: `content-script-${Date.now()}`
     });
 
-    // Send ready message
+    // Send ready message (background will extract tabId from sender)
     port.postMessage({
-      type: 'CONTENT_SCRIPT_READY',
-      tabId: getTabId()
+      type: 'CONTENT_SCRIPT_READY'
     });
 
     // Listen for messages from background script via port
@@ -65,28 +64,38 @@
   function handleMessage(message) {
     console.log('Content script received message:', message);
 
+    if (!message || !message.type) {
+      console.warn('Content script: Invalid message format', message);
+      return;
+    }
+
     switch (message.type) {
       case 'DEVTOOLS_ACTIVE':
         // DevTools panel is active, ready to accept selections
+        console.log('Content script: DevTools is active');
         break;
       
       case 'DEVTOOLS_INACTIVE':
         // DevTools panel is hidden, disable selection mode
+        console.log('Content script: DevTools is inactive');
         disableSelectionMode();
         break;
       
       case 'DEVTOOLS_DISCONNECTED':
         // DevTools closed, cleanup everything
+        console.log('Content script: DevTools disconnected');
         cleanup();
         break;
       
       case 'START_SELECTION':
         // Start selection mode
+        console.log('Content script: Starting selection mode');
         enableSelectionMode();
         break;
       
       case 'STOP_SELECTION':
         // Stop selection mode
+        console.log('Content script: Stopping selection mode');
         disableSelectionMode();
         break;
       
@@ -99,8 +108,14 @@
    * Create the overlay element
    */
   function createOverlay() {
-    if (overlay) {
+    if (overlay && document.body.contains(overlay)) {
       return overlay;
+    }
+
+    // Ensure body exists
+    if (!document.body) {
+      console.warn('Component Auditor: document.body not available yet');
+      return null;
     }
 
     overlay = document.createElement('div');
@@ -124,7 +139,10 @@
    */
   function updateOverlay(target) {
     if (!overlay) {
-      createOverlay();
+      const created = createOverlay();
+      if (!created) {
+        return; // Could not create overlay
+      }
     }
 
     const rect = target.getBoundingClientRect();
@@ -215,7 +233,11 @@
     document.addEventListener('click', handleClick, true);
 
     // Change cursor to indicate selection mode
-    document.body.style.cursor = 'crosshair';
+    // Use a style element to override page styles
+    const style = document.createElement('style');
+    style.id = '__CA_CURSOR_STYLE__';
+    style.textContent = '* { cursor: crosshair !important; }';
+    document.head.appendChild(style);
     
     console.log('Component Auditor: Selection mode enabled');
   }
@@ -235,8 +257,11 @@
     document.removeEventListener('mouseover', handleMouseOver, true);
     document.removeEventListener('click', handleClick, true);
 
-    // Restore cursor
-    document.body.style.cursor = '';
+    // Restore cursor by removing the style element
+    const style = document.getElementById('__CA_CURSOR_STYLE__');
+    if (style && style.parentNode) {
+      style.parentNode.removeChild(style);
+    }
 
     console.log('Component Auditor: Selection mode disabled');
   }
@@ -250,6 +275,12 @@
     if (overlay && overlay.parentNode) {
       overlay.parentNode.removeChild(overlay);
       overlay = null;
+    }
+
+    // Remove cursor style if it exists
+    const style = document.getElementById('__CA_CURSOR_STYLE__');
+    if (style && style.parentNode) {
+      style.parentNode.removeChild(style);
     }
 
     // Clear the global reference
