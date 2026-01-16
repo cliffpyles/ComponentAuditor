@@ -416,6 +416,10 @@
     const detected = [];
 
     try {
+      console.log("Component Auditor: Starting framework detection");
+      console.log("Component Auditor: window object available?", typeof window !== "undefined");
+      console.log("Component Auditor: document object available?", typeof document !== "undefined");
+      
       // React Detection - Multiple reliable methods
       let hasReact = false;
       
@@ -585,7 +589,7 @@
       }
       
       // Method 3: Check for Angular in window (Angular 2+)
-      if (!hasAngular && (window.ng || window.ng.probe)) {
+      if (!hasAngular && window.ng && window.ng.probe) {
         detected.push("Angular");
         hasAngular = true;
       }
@@ -710,10 +714,14 @@
       if (hasMUI) {
         detected.push("Material-UI");
       }
+      
+      console.log("Component Auditor: Framework detection complete", detected);
     } catch (error) {
-      console.warn("Component Auditor: Error detecting frameworks", error);
+      console.error("Component Auditor: Error detecting frameworks", error);
+      console.error("Component Auditor: Error stack", error.stack);
     }
 
+    console.log("Component Auditor: Returning frameworks array", detected);
     return detected;
   }
 
@@ -780,8 +788,11 @@
     const tokens = extractTokens(e.target);
 
     // Extract context awareness data (framework detection and URL parsing)
+    console.log("Component Auditor: About to detect frameworks");
     const frameworks = detectFrameworks();
+    console.log("Component Auditor: Detected frameworks", frameworks);
     const urlData = parseURL();
+    console.log("Component Auditor: URL data", urlData);
 
     // Prepare the selection message
     const selectionMessage = {
