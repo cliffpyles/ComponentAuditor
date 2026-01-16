@@ -13,55 +13,68 @@
   'use strict';
 
   // Store active connections by tabId
-  const connections = new Map();
+  const panelConnections = new Map();
+  const contentConnections = new Map();
 
   /**
    * Handle incoming connections from DevTools panel or content scripts
    */
   chrome.runtime.onConnect.addListener(function(port) {
-    console.log('Background: Connection received', port.name);
+    console.log('Background: Connection received', port.name, {
+      sender: port.sender,
+      hasTab: !!(port.sender && port.sender.tab)
+    });
 
-    // Extract tabId from port or sender
-    let tabId = null;
-    
-    if (port.sender && port.sender.tab) {
-      tabId = port.sender.tab.id;
-    } else if (port.name && port.name.includes('tabId')) {
-      // If tabId is passed in connection name, extract it
-      const match = port.name.match(/tabId:(\d+)/);
-      if (match) {
-        tabId = parseInt(match[1], 10);
-      }
+    // Handle DevTools Panel Connections
+    if (port.name === 'devtools-panel') {
+      const initListener = function(message) {
+        if (message.type === 'DEVTOOLS_CONNECTED' && message.tabId) {
+          const tabId = message.tabId;
+          console.log(`Background: Registered DevTools panel for tab ${tabId}`);
+          panelConnections.set(tabId, port);
+          port.onMessage.removeListener(initListener);
+          
+          // Setup cleanup
+          port.onDisconnect.addListener(function() {
+            console.log(`Background: DevTools panel disconnected for tab ${tabId}`);
+            panelConnections.delete(tabId);
+            handlePanelDisconnected(tabId);
+          });
+        }
+      };
+      port.onMessage.addListener(initListener);
     }
-
-      // For DevTools panel connections, wait for first message with tabId
-      if (!tabId && port.name === 'devtools-panel') {
-        // DevTools panel will send tabId in first message
-        const messageHandler = function(message) {
-          if (message.type === 'DEVTOOLS_CONNECTED' && message.tabId) {
-            tabId = message.tabId;
-            storeConnection(tabId, port);
-            // Remove this one-time handler
-            port.onMessage.removeListener(messageHandler);
-          }
-        };
-        port.onMessage.addListener(messageHandler);
+    
+    // Handle Content Script Connections
+    else if (port.name.startsWith('content-script')) {
+      let tabId = null;
+      if (port.sender && port.sender.tab) {
+        tabId = port.sender.tab.id;
+        console.log(`Background: Registered content script for tab ${tabId}`);
+        contentConnections.set(tabId, port);
       }
-
-    // Store connection if we have a tabId
-    if (tabId) {
-      storeConnection(tabId, port);
-    } else {
-      // Store connection with a temporary key for non-tab connections
-      const tempKey = `temp_${Date.now()}`;
-      connections.set(tempKey, port);
+      
+      // Setup cleanup
+      port.onDisconnect.addListener(function() {
+        if (tabId) {
+          console.log(`Background: Content script disconnected for tab ${tabId}`);
+          contentConnections.delete(tabId);
+        } else {
+          console.log('Background: Content script disconnected (unknown tabId)');
+        }
+      });
     }
 
     /**
      * Handle messages from connected ports
      */
-    port.onMessage.addListener(function(message, senderPort) {
-      console.log('Background: Message received', message);
+    port.onMessage.addListener(function(message) {
+      // Ignore initial connection messages here (handled above)
+      if (message.type === 'DEVTOOLS_CONNECTED' || message.type === 'CONTENT_SCRIPT_READY') {
+        return;
+      }
+
+      console.log('Background: Message received via port', message.type);
 
       // Route messages based on type
       switch (message.type) {
@@ -75,54 +88,36 @@
         
         case 'ELEMENT_SELECTED':
           // Forward element selection to DevTools panel
-          const elementTabId = getTabIdFromPort(senderPort);
-          if (elementTabId) {
-            forwardToDevToolsPanel(elementTabId, message);
+          // Try to find the target tabId from the message, or the port
+          let targetTabId = message.tabId;
+          
+          if (!targetTabId && port.sender && port.sender.tab) {
+            targetTabId = port.sender.tab.id;
+          }
+
+          if (targetTabId) {
+            console.log(`Background: Forwarding ELEMENT_SELECTED to panel for tab ${targetTabId}`);
+            forwardToDevToolsPanel(targetTabId, message);
+          } else {
+            console.error('Background: Could not determine tabId for ELEMENT_SELECTED');
           }
           break;
         
-        case 'CONTENT_SCRIPT_READY':
-          // Content script is ready (no action needed)
-          console.log('Background: Content script ready');
-          break;
-        
         case 'START_SELECTION':
-          // Forward start selection message to content script
-          const startTabId = message.tabId || getTabIdFromPort(port) || findTabIdFromConnection(port);
-          if (startTabId) {
-            forwardToContentScript(startTabId, {
-              type: 'START_SELECTION'
-            });
-          } else {
-            console.error('Background: Could not determine tabId for START_SELECTION');
+          if (message.tabId) {
+            forwardToContentScript(message.tabId, { type: 'START_SELECTION' });
           }
           break;
         
         case 'STOP_SELECTION':
-          // Forward stop selection message to content script
-          const stopTabId = message.tabId || getTabIdFromPort(port) || findTabIdFromConnection(port);
-          if (stopTabId) {
-            forwardToContentScript(stopTabId, {
-              type: 'STOP_SELECTION'
-            });
-          } else {
-            console.error('Background: Could not determine tabId for STOP_SELECTION');
+          if (message.tabId) {
+            forwardToContentScript(message.tabId, { type: 'STOP_SELECTION' });
           }
           break;
         
         case 'CAPTURE_SCREENSHOT':
-          // Capture screenshot of the visible tab
-          const screenshotTabId = message.tabId || getTabIdFromPort(port) || findTabIdFromConnection(port);
-          if (screenshotTabId) {
-            captureScreenshot(screenshotTabId, port);
-          } else {
-            console.error('Background: Could not determine tabId for CAPTURE_SCREENSHOT');
-            if (port) {
-              port.postMessage({
-                type: 'SCREENSHOT_ERROR',
-                error: 'Could not determine tabId'
-              });
-            }
+          if (message.tabId) {
+            captureScreenshot(message.tabId, port);
           }
           break;
         
@@ -130,55 +125,33 @@
           console.warn('Background: Unknown message type', message.type);
       }
     });
-
-    /**
-     * Handle disconnection (cleanup)
-     */
-    port.onDisconnect.addListener(function() {
-      console.log('Background: Connection disconnected', port.name);
-      
-      // Find and remove connection from map
-      for (const [key, storedPort] of connections.entries()) {
-        if (storedPort === port) {
-          connections.delete(key);
-          
-          // If this was a DevTools panel connection, trigger cleanup
-          if (key !== null && typeof key === 'number') {
-            handlePanelDisconnected(key);
-          }
-          break;
-        }
-      }
-    });
   });
 
   /**
-   * Store a connection by tabId
-   * If a connection already exists for this tabId, it will be replaced
+   * Handle messages sent via chrome.runtime.sendMessage (fallback for content scripts)
    */
-  function storeConnection(tabId, port) {
-    if (tabId) {
-      if (connections.has(tabId)) {
-        console.log(`Background: Replacing existing connection for tab ${tabId}`);
-      }
-      connections.set(tabId, port);
-      console.log(`Background: Stored connection for tab ${tabId}`);
+  chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    console.log('Background: Message received via onMessage', message.type);
+    
+    // Handle ELEMENT_SELECTED messages from content scripts
+    if (message.type === 'ELEMENT_SELECTED' && sender.tab) {
+      const tabId = sender.tab.id;
+      console.log(`Background: Forwarding ELEMENT_SELECTED (via onMessage) to panel for tab ${tabId}`);
+      forwardToDevToolsPanel(tabId, message);
+      return true;
     }
-  }
+    
+    return false;
+  });
 
   /**
    * Handle panel shown event
    */
   function handlePanelShown(tabId) {
-    console.log(`Background: Panel shown for tab ${tabId}`);
-    
-    // Notify content script that DevTools is active
     if (tabId) {
-      chrome.tabs.sendMessage(tabId, {
+      forwardToContentScript(tabId, {
         type: 'DEVTOOLS_ACTIVE',
         tabId: tabId
-      }).catch(err => {
-        console.warn('Background: Could not send message to content script', err);
       });
     }
   }
@@ -187,33 +160,22 @@
    * Handle panel hidden event
    */
   function handlePanelHidden(tabId) {
-    console.log(`Background: Panel hidden for tab ${tabId}`);
-    
-    // Notify content script that DevTools is inactive
     if (tabId) {
-      chrome.tabs.sendMessage(tabId, {
+      forwardToContentScript(tabId, {
         type: 'DEVTOOLS_INACTIVE',
         tabId: tabId
-      }).catch(err => {
-        console.warn('Background: Could not send message to content script', err);
       });
     }
   }
 
   /**
    * Handle panel disconnection (safety switch)
-   * This triggers cleanup when DevTools is closed
    */
   function handlePanelDisconnected(tabId) {
-    console.log(`Background: Panel disconnected for tab ${tabId} - triggering cleanup`);
-    
-    // Notify content script to clean up overlay
     if (tabId) {
-      chrome.tabs.sendMessage(tabId, {
+      forwardToContentScript(tabId, {
         type: 'DEVTOOLS_DISCONNECTED',
         tabId: tabId
-      }).catch(err => {
-        console.warn('Background: Could not send cleanup message to content script', err);
       });
     }
   }
@@ -222,9 +184,9 @@
    * Forward message to DevTools panel for a specific tab
    */
   function forwardToDevToolsPanel(tabId, message) {
-    const connection = connections.get(tabId);
-    if (connection) {
-      connection.postMessage(message);
+    const port = panelConnections.get(tabId);
+    if (port) {
+      port.postMessage(message);
     } else {
       console.warn(`Background: No DevTools panel connection found for tab ${tabId}`);
     }
@@ -234,35 +196,23 @@
    * Forward message to content script for a specific tab
    */
   function forwardToContentScript(tabId, message) {
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, message).catch(err => {
-        console.warn(`Background: Could not send message to content script for tab ${tabId}`, err);
-      });
-    } else {
-      console.warn('Background: No tabId provided for content script message');
-    }
-  }
-
-  /**
-   * Get tabId from port sender
-   */
-  function getTabIdFromPort(port) {
-    if (port && port.sender && port.sender.tab) {
-      return port.sender.tab.id;
-    }
-    return null;
-  }
-
-  /**
-   * Find tabId by looking up which connection this port belongs to
-   */
-  function findTabIdFromConnection(port) {
-    for (const [tabId, storedPort] of connections.entries()) {
-      if (storedPort === port && typeof tabId === 'number') {
-        return tabId;
+    // Try to use port first
+    const port = contentConnections.get(tabId);
+    if (port) {
+      try {
+        port.postMessage(message);
+        return;
+      } catch (e) {
+        console.warn('Background: Failed to send via port, falling back to tabs.sendMessage', e);
+        contentConnections.delete(tabId);
       }
     }
-    return null;
+    
+    // Fallback to tabs.sendMessage
+    chrome.tabs.sendMessage(tabId, message).catch(err => {
+      // Ignore errors about closed connection/tab
+      console.log(`Background: Message delivery failed for tab ${tabId}`, err.message);
+    });
   }
 
   /**
@@ -271,42 +221,31 @@
   function captureScreenshot(tabId, port) {
     console.log(`Background: Capturing screenshot for tab ${tabId}`);
     
-    // First, get the tab to find its windowId
     chrome.tabs.get(tabId, function(tab) {
       if (chrome.runtime.lastError) {
         console.error('Background: Error getting tab', chrome.runtime.lastError);
-        if (port) {
+        port.postMessage({
+          type: 'SCREENSHOT_ERROR',
+          error: chrome.runtime.lastError.message
+        });
+        return;
+      }
+
+      chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, function(dataUrl) {
+        if (chrome.runtime.lastError) {
+          console.error('Background: Screenshot capture error', chrome.runtime.lastError);
           port.postMessage({
             type: 'SCREENSHOT_ERROR',
             error: chrome.runtime.lastError.message
           });
-        }
-        return;
-      }
-
-      // Capture the visible tab in that window
-      chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, function(dataUrl) {
-        if (chrome.runtime.lastError) {
-          console.error('Background: Screenshot capture error', chrome.runtime.lastError);
-          if (port) {
-            port.postMessage({
-              type: 'SCREENSHOT_ERROR',
-              error: chrome.runtime.lastError.message
-            });
-          }
           return;
         }
 
-        // Send screenshot back to the requester
-        if (port) {
-          port.postMessage({
-            type: 'SCREENSHOT_CAPTURED',
-            dataUrl: dataUrl,
-            tabId: tabId
-          });
-        } else {
-          console.error('Background: No port available to send screenshot');
-        }
+        port.postMessage({
+          type: 'SCREENSHOT_CAPTURED',
+          dataUrl: dataUrl,
+          tabId: tabId
+        });
       });
     });
   }

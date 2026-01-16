@@ -5,6 +5,34 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-01-16
+
+### Fixed
+
+- **Connection Management Issues**
+  - Fixed critical bug where DevTools panel and content script connections were overwriting each other
+  - Refactored background script to use separate connection maps: `panelConnections` and `contentConnections`
+  - DevTools panel and content script can now maintain simultaneous connections for the same tab
+  - Fixed issue where panel connection was lost when content script reconnected
+
+- **Message Routing**
+  - Fixed `ELEMENT_SELECTED` messages not being forwarded to DevTools panel
+  - Added proper tabId extraction from message payload, port sender, and connection map
+  - Improved message routing logic to prioritize tabId from message payload
+  - Added fallback message handling via `chrome.runtime.onMessage` for content scripts
+  - Content script now includes tabId in `ELEMENT_SELECTED` messages for reliable routing
+
+- **Port Disconnection Handling**
+  - Improved content script port reconnection logic when connection is lost
+  - Added fallback to `chrome.runtime.sendMessage` when port is null or disconnected
+  - Better error logging and handling for message delivery failures
+  - Content script now stores tabId from `DEVTOOLS_ACTIVE` message for later use
+
+- **Message Handler Cleanup**
+  - Fixed "Unknown message type DEVTOOLS_CONNECTED" warning
+  - Initial connection messages (`DEVTOOLS_CONNECTED`, `CONTENT_SCRIPT_READY`) now handled separately
+  - Improved message type handling and routing logic
+
 ## [1.1.0] - 2026-01-16
 
 ### Added

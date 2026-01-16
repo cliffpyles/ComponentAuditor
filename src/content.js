@@ -14,6 +14,7 @@
   let isSelectionMode = false;
   let overlay = null;
   let port = null;
+  let currentTabId = null;
 
   /**
    * Initialize the content script
@@ -44,8 +45,40 @@
 
     // Handle disconnection
     port.onDisconnect.addListener(function () {
-      console.log("Content script disconnected from background");
-      cleanup();
+      const error = chrome.runtime.lastError;
+      if (error) {
+        console.log("Content script disconnected from background:", error.message);
+      } else {
+        console.log("Content script disconnected from background");
+      }
+
+      port = null;
+
+      // Only cleanup if this was an unexpected disconnection
+      // (not if we're in the middle of a selection)
+      if (!isSelectionMode) {
+        cleanup();
+      } else {
+        // Try to reconnect if we're still in selection mode
+        console.log("Content script: Attempting to reconnect port");
+        try {
+          port = chrome.runtime.connect({
+            name: `content-script-${Date.now()}`,
+          });
+          port.postMessage({
+            type: "CONTENT_SCRIPT_READY",
+          });
+          port.onMessage.addListener(function (message) {
+            handleMessage(message);
+          });
+          port.onDisconnect.addListener(function () {
+            console.log("Content script disconnected from background (reconnect)");
+            port = null;
+          });
+        } catch (err) {
+          console.error("Content script: Failed to reconnect port", err);
+        }
+      }
     });
   }
 
@@ -72,7 +105,10 @@
     switch (message.type) {
       case "DEVTOOLS_ACTIVE":
         // DevTools panel is active, ready to accept selections
-        console.log("Content script: DevTools is active");
+        console.log("Content script: DevTools is active", message.tabId);
+        if (message.tabId) {
+          currentTabId = message.tabId;
+        }
         break;
 
       case "DEVTOOLS_INACTIVE":
@@ -206,24 +242,43 @@
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
+    // Prepare the selection message
+    const selectionMessage = {
+      type: "ELEMENT_SELECTED",
+      tabId: currentTabId,
+      element: {
+        tagName: e.target.tagName,
+        className: e.target.className,
+        id: e.target.id,
+      },
+      rect: {
+        x: rect.left + scrollX,
+        y: rect.top + scrollY,
+        width: rect.width,
+        height: rect.height,
+        // Also include viewport-relative coordinates for screenshot cropping
+        viewportX: rect.left,
+        viewportY: rect.top,
+      },
+    };
+
     // Send selection message to background script
     if (port) {
-      port.postMessage({
-        type: "ELEMENT_SELECTED",
-        element: {
-          tagName: e.target.tagName,
-          className: e.target.className,
-          id: e.target.id,
-        },
-        rect: {
-          x: rect.left + scrollX,
-          y: rect.top + scrollY,
-          width: rect.width,
-          height: rect.height,
-          // Also include viewport-relative coordinates for screenshot cropping
-          viewportX: rect.left,
-          viewportY: rect.top,
-        },
+      try {
+        port.postMessage(selectionMessage);
+        console.log("Content script: Sent ELEMENT_SELECTED via port");
+      } catch (error) {
+        console.error("Content script: Error sending via port, trying fallback", error);
+        // Fallback to chrome.runtime.sendMessage
+        chrome.runtime.sendMessage(selectionMessage).catch(function (err) {
+          console.error("Content script: Failed to send ELEMENT_SELECTED message", err);
+        });
+      }
+    } else {
+      console.warn("Content script: Port is null, using chrome.runtime.sendMessage fallback");
+      // Fallback to chrome.runtime.sendMessage if port is disconnected
+      chrome.runtime.sendMessage(selectionMessage).catch(function (err) {
+        console.error("Content script: Failed to send ELEMENT_SELECTED message", err);
       });
     }
 
