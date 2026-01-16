@@ -1,5 +1,7 @@
 # Component Auditor
 
+> **⚠️ Warning: This project is not stable or ready for general use. Use at your own risk.**
+
 ## Vision
 
 A data extraction tool that lives inside Chrome DevTools. It enables users to rapidly build structured datasets of web components by labeling live UI elements. The resulting data is optimized for ingestion into external analysis tools or for training machine learning models related to UI/UX.
