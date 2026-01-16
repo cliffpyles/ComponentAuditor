@@ -419,10 +419,10 @@
       console.log("Component Auditor: Starting framework detection");
       console.log("Component Auditor: window object available?", typeof window !== "undefined");
       console.log("Component Auditor: document object available?", typeof document !== "undefined");
-      
+
       // React Detection - Multiple reliable methods
       let hasReact = false;
-      
+
       // Method 1: React DevTools hook (most reliable)
       if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
         const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
@@ -434,26 +434,58 @@
         } else if (hook.onCommitFiberRoot || hook.onCommitFiberUnmount) {
           // React 16+ indicators
           hasReact = true;
+        } else {
+          // Even if hook exists without renderers, it's a strong indicator of React
+          // (DevTools hook is injected by React DevTools extension or React itself)
+          hasReact = true;
         }
       }
-      
+
       // Method 2: Check for React global (if exposed)
       if (!hasReact && (window.React || window.ReactDOM)) {
         hasReact = true;
       }
-      
-      // Method 3: Check DOM for React-specific root elements
+
+      // Method 3: Check DOM for React-specific root elements and data attributes
       if (!hasReact) {
-        const reactRoot = document.querySelector("[data-reactroot]") || 
-                         document.querySelector("[data-react-helmet]") ||
-                         document.querySelector("#root") ||
-                         document.querySelector("#app");
-        // If we find a common React root, it's likely React (heuristic)
-        if (reactRoot) {
+        // Check for React-specific data attributes first (most reliable)
+        const reactDataAttr = document.querySelector("[data-reactroot]") ||
+                             document.querySelector("[data-react-helmet]") ||
+                             document.querySelector("[data-react-class]");
+        
+        if (reactDataAttr) {
           hasReact = true;
+        } else {
+          // Check for common React root IDs (less reliable, but common pattern)
+          const reactRoot = document.querySelector("#root") ||
+                           document.querySelector("#app") ||
+                           document.querySelector("#react-root");
+          
+          // If we find a common React root, check if it has React fiber properties
+          // (though these might not be accessible in content script context)
+          if (reactRoot) {
+            // Additional check: look for React-specific patterns in the DOM
+            // React often uses data attributes or specific class patterns
+            const hasReactPatterns = document.querySelector("[data-testid]") ||
+                                     document.querySelector("[class*='react']") ||
+                                     document.querySelector("[class*='React']");
+            
+            // If we find root AND React patterns, it's likely React
+            if (hasReactPatterns) {
+              hasReact = true;
+            } else {
+              // If root exists but no patterns, still consider it React if no Angular indicators
+              // (heuristic: most modern apps using #root are React)
+              const hasAngularIndicators = document.querySelector("[ng-version]") ||
+                                          document.querySelector("[ng-app]");
+              if (!hasAngularIndicators) {
+                hasReact = true;
+              }
+            }
+          }
         }
       }
-      
+
       // Method 4: Check script tags (external) for React
       if (!hasReact) {
         const scripts = document.querySelectorAll("script[src]");
@@ -465,7 +497,7 @@
           }
         }
       }
-      
+
       // Method 5: Check inline scripts for React references
       if (!hasReact) {
         const inlineScripts = document.querySelectorAll("script:not([src])");
@@ -477,40 +509,41 @@
           }
         }
       }
-      
+
       if (hasReact) {
         detected.push("React");
       }
 
       // Vue Detection - Multiple reliable methods
       let hasVue = false;
-      
+
       // Method 1: Vue DevTools hook
       if (window.__VUE_DEVTOOLS_GLOBAL_HOOK__) {
         hasVue = true;
       }
-      
+
       // Method 2: Vue global (Vue 2)
       if (!hasVue && typeof window.Vue !== "undefined") {
         hasVue = true;
       }
-      
+
       // Method 3: Vue 3 app instance
       if (!hasVue && window.__VUE__) {
         hasVue = true;
       }
-      
+
       // Method 4: Check DOM for Vue-specific attributes
       if (!hasVue) {
         // Vue 2 uses data-v-* attributes, Vue 3 uses v-* directives
         // Check for common Vue directives
-        const vueElement = document.querySelector("[v-cloak]") ||
-                          document.querySelector("[v-if]") ||
-                          document.querySelector("[v-for]") ||
-                          document.querySelector("[v-model]") ||
-                          document.querySelector("[v-show]") ||
-                          document.querySelector("[v-bind]");
-        
+        const vueElement =
+          document.querySelector("[v-cloak]") ||
+          document.querySelector("[v-if]") ||
+          document.querySelector("[v-for]") ||
+          document.querySelector("[v-model]") ||
+          document.querySelector("[v-show]") ||
+          document.querySelector("[v-bind]");
+
         // Also check for Vue 2 data-v-* scoped style attributes
         if (!vueElement) {
           const allElements = document.querySelectorAll("*");
@@ -533,12 +566,12 @@
             }
           }
         }
-        
+
         if (vueElement) {
           hasVue = true;
         }
       }
-      
+
       // Method 5: Check script tags (external) for Vue
       if (!hasVue) {
         const scripts = document.querySelectorAll("script[src]");
@@ -550,7 +583,7 @@
           }
         }
       }
-      
+
       // Method 6: Check inline scripts for Vue references
       if (!hasVue) {
         const inlineScripts = document.querySelectorAll("script:not([src])");
@@ -562,64 +595,82 @@
           }
         }
       }
-      
+
       if (hasVue) {
         detected.push("Vue");
       }
 
       // Angular Detection
+      // Skip Angular detection if React is already detected (to avoid false positives)
       let hasAngular = false;
       
-      // Method 1: AngularJS (v1.x)
-      if (typeof window.angular !== "undefined" && window.angular.version) {
-        detected.push("AngularJS");
-        hasAngular = true;
-      }
-      
-      // Method 2: Angular 2+ (check for ng-version attribute)
-      if (!hasAngular) {
-        const ngElement = document.querySelector("[ng-version]") ||
-                         document.querySelector("[ng-app]") ||
-                         document.querySelector("app-root") ||
-                         document.querySelector("ng-component");
-        if (ngElement) {
+      // Only proceed with Angular detection if React wasn't detected
+      // (React apps sometimes have generic element names that could match Angular patterns)
+      if (!hasReact) {
+        // Method 1: AngularJS (v1.x)
+        if (typeof window.angular !== "undefined" && window.angular.version) {
+          detected.push("AngularJS");
+          hasAngular = true;
+        }
+
+        // Method 2: Angular 2+ (check for ng-version attribute - most reliable)
+        // Only use ng-version as it's Angular-specific. app-root and ng-component are too generic.
+        if (!hasAngular) {
+          const ngVersionElement = document.querySelector("[ng-version]");
+          if (ngVersionElement) {
+            detected.push("Angular");
+            hasAngular = true;
+          }
+        }
+        
+        // Method 2b: Check for ng-app (AngularJS specific)
+        if (!hasAngular) {
+          const ngAppElement = document.querySelector("[ng-app]");
+          if (ngAppElement) {
+            // Double-check it's actually Angular by looking for Angular-specific patterns
+            const hasAngularPatterns = document.querySelector("[ng-controller]") ||
+                                      document.querySelector("[ng-repeat]") ||
+                                      document.querySelector("[ng-if]");
+            if (hasAngularPatterns) {
+              detected.push("AngularJS");
+              hasAngular = true;
+            }
+          }
+        }
+
+        // Method 3: Check for Angular in window (Angular 2+)
+        if (!hasAngular && window.ng && window.ng.probe) {
           detected.push("Angular");
           hasAngular = true;
         }
-      }
-      
-      // Method 3: Check for Angular in window (Angular 2+)
-      if (!hasAngular && window.ng && window.ng.probe) {
-        detected.push("Angular");
-        hasAngular = true;
-      }
-      
-      // Method 4: Check script tags (external) for Angular
-      if (!hasAngular) {
-        const scripts = document.querySelectorAll("script[src]");
-        for (const script of scripts) {
-          const src = script.src.toLowerCase();
-          if (src.includes("angular") || src.includes("/angular/")) {
-            if (!detected.includes("Angular") && !detected.includes("AngularJS")) {
-              detected.push("Angular");
+
+        // Method 4: Check script tags (external) for Angular
+        if (!hasAngular) {
+          const scripts = document.querySelectorAll("script[src]");
+          for (const script of scripts) {
+            const src = script.src.toLowerCase();
+            if (src.includes("angular") || src.includes("/angular/")) {
+              if (!detected.includes("Angular") && !detected.includes("AngularJS")) {
+                detected.push("Angular");
+              }
+              hasAngular = true;
+              break;
             }
-            hasAngular = true;
-            break;
           }
         }
-      }
-      
-      // Method 5: Check inline scripts for Angular references
-      if (!hasAngular) {
-        const inlineScripts = document.querySelectorAll("script:not([src])");
-        for (const script of inlineScripts) {
-          const content = script.textContent || script.innerHTML;
-          if (content && (content.includes("angular") || content.includes("ng."))) {
-            if (!detected.includes("Angular") && !detected.includes("AngularJS")) {
-              detected.push("Angular");
+        
+        // Method 5: Check inline scripts for Angular references
+        if (!hasAngular) {
+          const inlineScripts = document.querySelectorAll("script:not([src])");
+          for (const script of inlineScripts) {
+            const content = script.textContent || script.innerHTML;
+            if (content && (content.includes("angular") || content.includes("ng."))) {
+              if (!detected.includes("Angular") && !detected.includes("AngularJS")) {
+                detected.push("Angular");
+              }
+              hasAngular = true;
+              break;
             }
-            hasAngular = true;
-            break;
           }
         }
       }
@@ -638,11 +689,12 @@
 
       // CSS Framework Detection
       // Bootstrap - check for Bootstrap classes or data attributes
-      const hasBootstrap = document.querySelector(".container") ||
-                          document.querySelector(".row") ||
-                          document.querySelector("[class*='col-']") ||
-                          document.querySelector("[data-bs-toggle]") ||
-                          document.querySelector("[data-toggle]");
+      const hasBootstrap =
+        document.querySelector(".container") ||
+        document.querySelector(".row") ||
+        document.querySelector("[class*='col-']") ||
+        document.querySelector("[data-bs-toggle]") ||
+        document.querySelector("[data-toggle]");
       if (hasBootstrap) {
         detected.push("Bootstrap");
       }
@@ -650,7 +702,7 @@
       // Tailwind CSS - check for Tailwind utility classes
       // Check common container elements and a limited sample
       let hasTailwind = false;
-      
+
       // Check body and common container elements first (most likely to have Tailwind classes)
       const commonElements = [
         document.body,
@@ -661,20 +713,21 @@
         document.querySelector("article"),
         document.querySelector("section"),
       ].filter(Boolean);
-      
+
       // Tailwind-specific patterns that are less likely to be false positives
-      const tailwindPattern = /^(flex|grid|hidden|block|inline|absolute|relative|fixed|sticky|p-\d+|px-\d+|py-\d+|pt-\d+|pr-\d+|pb-\d+|pl-\d+|m-\d+|mx-\d+|my-\d+|mt-\d+|mr-\d+|mb-\d+|ml-\d+|text-\w+|bg-\w+|border-\w+|rounded-\w+|w-\w+|h-\w+|max-w-\w+|min-w-\w+|max-h-\w+|min-h-\w+)/;
-      
+      const tailwindPattern =
+        /^(flex|grid|hidden|block|inline|absolute|relative|fixed|sticky|p-\d+|px-\d+|py-\d+|pt-\d+|pr-\d+|pb-\d+|pl-\d+|m-\d+|mx-\d+|my-\d+|mt-\d+|mr-\d+|mb-\d+|ml-\d+|text-\w+|bg-\w+|border-\w+|rounded-\w+|w-\w+|h-\w+|max-w-\w+|min-w-\w+|max-h-\w+|min-h-\w+)/;
+
       for (const el of commonElements) {
         if (el && el.className && typeof el.className === "string") {
           const classes = el.className.split(/\s+/);
-          if (classes.some(cls => tailwindPattern.test(cls))) {
+          if (classes.some((cls) => tailwindPattern.test(cls))) {
             hasTailwind = true;
             break;
           }
         }
       }
-      
+
       // If not found, check script tags for Tailwind
       if (!hasTailwind) {
         const scripts = document.querySelectorAll("script[src]");
@@ -686,7 +739,7 @@
           }
         }
       }
-      
+
       // Last resort: check a small sample of elements (first 100)
       if (!hasTailwind) {
         const allElements = document.querySelectorAll("*");
@@ -695,26 +748,27 @@
           const el = allElements[i];
           if (el && el.className && typeof el.className === "string") {
             const classes = el.className.split(/\s+/);
-            if (classes.some(cls => tailwindPattern.test(cls))) {
+            if (classes.some((cls) => tailwindPattern.test(cls))) {
               hasTailwind = true;
               break;
             }
           }
         }
       }
-      
+
       if (hasTailwind) {
         detected.push("Tailwind");
       }
 
       // Material-UI - check for MUI class patterns
-      const hasMUI = document.querySelector("[class*='Mui']") ||
-                    document.querySelector("[class*='mui-']") ||
-                    document.querySelector("[class*='makeStyles']");
+      const hasMUI =
+        document.querySelector("[class*='Mui']") ||
+        document.querySelector("[class*='mui-']") ||
+        document.querySelector("[class*='makeStyles']");
       if (hasMUI) {
         detected.push("Material-UI");
       }
-      
+
       console.log("Component Auditor: Framework detection complete", detected);
     } catch (error) {
       console.error("Component Auditor: Error detecting frameworks", error);
@@ -733,7 +787,7 @@
     try {
       const location = window.location;
       const route = location.pathname || "/";
-      
+
       // Parse query parameters
       const queryParams = {};
       if (location.search) {
