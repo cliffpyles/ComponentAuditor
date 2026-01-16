@@ -1,66 +1,162 @@
-# Development Roadmap
+# Development Plan
 
-## Phase 1: The Skeleton & Connectivity
+**Primary Goal:** Build a robust Chrome Extension for creating high-fidelity UI datasets.
 
-**Goal:** Establish the DevTools panel, the background connection, and the visual picker.
+---
 
-- [ ] **Project Setup:** Initialize Manifest V3, file structure, and icons.
-- [ ] **DevTools Integration:** Create `devtools_page` and the main `panel.html` shell.
-- [ ] **Lifecycle Management:** Implement `background.js` port connection to handle DevTools Open/Close states.
-- [ ] **The Picker UI:** Implement the `mouseover` highlighter (overlay box) in `content.js`.
-- [ ] **Selection Logic:** freeze `elementID` on click and pass reference to the Panel.
-- [ ] **Toggle Logic:** Ensure picker deactivates when DevTools is closed or user toggles off.
+## Phase 1: Foundation & Connectivity
 
-## Phase 2: The Forensic Extraction Engine
+**Objective:** Establish the secure architecture required for DevTools extensions and create the "Select" experience.
 
-**Goal:** Automate the capture of all "Hard" technical data (Visuals, Code, Tokens).
+### 1.1 Project Initialization
 
-### A. Visuals & Code
+- [ ] **Scaffold Structure:** Set up the directory structure (`src/`, `assets/`, `_locales/`).
+- [ ] **Manifest V3 Configuration:**
+  - Define `manifest.json`.
+  - Register `devtools_page`.
+  - Declare permissions: `storage`, `activeTab`, `scripting`, `debugger`, `contextMenus`.
+  - configure `host_permissions` for `<all_urls>`.
 
-- [ ] **Screenshot Pipeline:** Implement `captureVisibleTab` + Canvas cropping to element coordinates.
-- [ ] **HTML Extraction:** Capture `outerHTML` of selected element.
-- [ ] **Lineage Extraction:** Traverse `parentNode` up to 3 levels to capture container hierarchy.
-- [ ] **Sibling Extraction:** Capture `outerHTML` of adjacent sibling elements (context).
-- [ ] **Framework Detection:** Scan `window` and DOM attributes for React, Vue, Angular, Tailwind, etc.
+### 1.2 DevTools Integration
 
-### B. Token Analysis
+- [ ] **Panel Entry Point:** Create `devtools.html` and `devtools.js` to initialize the `chrome.devtools.panels.create` API.
+- [ ] **The "Handshake":** Implement the connection logic in `background.js`.
+  - Listen for `chrome.runtime.onConnect`.
+  - Store open connections by `tabId`.
+  - Handle `onDisconnect` to trigger cleanup (safety switch).
 
-- [ ] **Computed Styles:** Extract specific values: Color, Font-Family, Size, Weight, Line-Height.
-- [ ] **Advanced CSS:** Extract `box-shadow` and `border-radius`.
-- [ ] **Spacing:** Extract computed `padding` and `margin` values.
+### 1.3 The "Picker" (Visual Selection)
 
-### C. Contextual Data
+- [ ] **Content Script Injection:** Ensure `content.js` loads on all pages.
+- [ ] **Overlay UI:** Create the DOM element for the "Highlighter Box" (absolute positioned `div`, z-index 999999).
+- [ ] **Hover Logic:**
+  - Add `mouseover` listener to `document`.
+  - Calculate `target.getBoundingClientRect()`.
+  - Update Overlay position/size to match target.
+- [ ] **Selection Logic:**
+  - Add `click` listener.
+  - `e.preventDefault()` and `e.stopPropagation()` to block native site behavior.
+  - Save reference: `window.__CA_LAST_ELEMENT__ = e.target`.
+  - Send message `ELEMENT_SELECTED` to DevTools panel.
 
-- [ ] **URL Parser:** Logic to split `window.location.href` into `Route` (path) and `Query Params` (object).
-- [ ] **State Detection:** Check element for pseudo-classes or attributes indicating state (e.g., `aria-expanded`, `disabled`, `.active`).
+---
 
-## Phase 3: The Semantic Analyzer
+## Phase 2: The Extraction Engine
 
-**Goal:** Algorithms to generate the "Composition" and "Inventory" data.
+**Objective:** Automate the capture of "Hard" technical data (Visuals, Code, Tokens).
 
-- [ ] **Atom Inventory Script:** Recursive function to count child tags (e.g., "Contains: 2 buttons, 1 img, 3 spans").
-- [ ] **Composition Builder:** Logic to generate the readable tree string (e.g., "Card > Header + Body").
-- [ ] **Event Listener Extraction:** Integrate `chrome.debugger` API to list attached events (click, hover, scroll).
-- [ ] **Heuristic Guesser:** Simple logic to suggest "Atomic Level" based on depth (Deep nesting = Organism; Shallow = Atom).
+### 2.1 Visual Capture
 
-## Phase 4: The Editor & Library UI
+- [ ] **Screenshot Pipeline:**
+  - DevTools requests capture -> Background runs `chrome.tabs.captureVisibleTab`.
+  - Send Base64 image back to Panel.
+- [ ] **Cropping Engine:**
+  - Create an off-screen HTML5 `<canvas>`.
+  - Load the Base64 image.
+  - Draw only the slice defined by the element's `rect` (x, y, width, height).
+  - Export cropped image as Base64 PNG.
 
-**Goal:** The user interface for manual tagging and data persistence.
+### 2.2 Code & Hierarchy Extraction
 
-### A. The Editor Form
+- [ ] **HTML Scraper:** Extract `element.outerHTML`.
+- [ ] **Lineage Traversal:**
+  - Write a loop to walk up `element.parentElement`.
+  - Capture tag names and classes for up to 3 ancestors.
+- [ ] **Sibling Analysis:**
+  - Access `element.previousElementSibling` and `nextElementSibling`.
+  - Capture their HTML/Tags to establish layout context.
 
-- [ ] **Manual Input Fields:** Build inputs for "Industry," "Brand," "Design Pattern," and "Interaction Pattern."
-- [ ] **Smart Dropdowns:** Pre-fill "Atomic Level" and "State" based on the Phase 3 heuristics, but allow user override.
-- [ ] **Preview Card:** Show the cropped screenshot and code snippet side-by-side.
+### 2.3 Token Analysis (Computed Styles)
 
-### B. Storage & Management
+- [ ] **Style Reader:** Use `window.getComputedStyle(element)`.
+- [ ] **Token Mapping:**
+  - **Color:** Extract `color`, `background-color`, `border-color`.
+  - **Type:** Extract `font-family`, `font-size`, `font-weight`, `line-height`.
+  - **Spacing:** Extract `padding` (top/right/bottom/left) and `margin`.
+  - **Effects:** Extract `box-shadow`, `border-radius`, `opacity`.
 
-- [ ] **IndexedDB Layer:** Finalize `db.js` for saving the massive JSON payload.
-- [ ] **Library Grid:** View saved components with thumbnail and label.
-- [ ] **Export/Import:** Implement JSON file generation including the Base64 images.
+### 2.4 Context Awareness
 
-## Phase 5: Polish & release
+- [ ] **Framework Detection:**
+  - Scan `window` for keys: `React`, `Vue`, `jQuery`, `webpack`.
+  - Scan DOM for attributes: `data-reactroot`, `ng-version`.
+- [ ] **URL Parser:**
+  - Parse `window.location`.
+  - Separate `pathname` (Route) from `search` (Query Params).
 
-- [ ] **Error Handling:** Graceful failure for Cross-Origin iframes or Shadow DOM.
-- [ ] **Theme Sync:** Match DevTools Dark/Light theme.
-- [ ] **Code Cleanup:** Remove console logs and minify scripts.
+---
+
+## Phase 3: Semantic Analysis & Forensics
+
+**Objective:** Generate the high-level "Intelligence" regarding composition and behavior.
+
+### 3.1 Advanced Forensics
+
+- [ ] **Debugger Integration:**
+  - Request `chrome.debugger` attach to the tab.
+  - Call `DOMDebugger.getEventListener` for the specific NodeID.
+  - Map raw listeners to human terms (e.g., "click", "focus").
+- [ ] **State Detection:**
+  - Check boolean attributes: `disabled`, `checked`, `selected`.
+  - Check ARIA states: `aria-expanded`, `aria-hidden`, `aria-pressed`.
+
+### 3.2 Composition Algorithms
+
+- [ ] **Inventory Script:**
+  - Write a recursive DOM walker inside the selected element.
+  - Count tags by category (e.g., `<button>`=Input, `<h1>`=Text, `<img>`=Media).
+  - Generate "Atom Inventory" object.
+- [ ] **Tree Builder:**
+  - Generate a string representation of the DOM tree (e.g., `Card > Header + Body`).
+- [ ] **Heuristic Guesser:**
+  - Logic to auto-suggest "Atomic Level" (e.g., If depth > 2 and children > 5, suggest "Organism").
+
+---
+
+## Phase 4: Data Management & UI
+
+**Objective:** Build the User Interface for verifying, labeling, and saving data.
+
+### 4.1 The Editor Panel
+
+- [ ] **UI Layout:** Split view (Left: Screenshot/Code, Right: Form).
+- [ ] **Form Inputs:**
+  - **Read-only:** Technical data (Size, Font, URL).
+  - **Editable:** "Atomic Level", "Design Pattern" (Dropdown), "Interaction Pattern" (Dropdown), "Notes".
+- [ ] **Validation:** Ensure critical fields are not empty before save.
+
+### 4.2 Storage Layer (IndexedDB)
+
+- [ ] **Database Wrapper (`db.js`):**
+  - `openDB()`: Version management and schema creation.
+  - `save(data)`: Put record with UUID key.
+  - `getAll()`: Retrieve generic list for library view.
+  - `delete(id)`: Remove record.
+
+### 4.3 Library & Export
+
+- [ ] **Library View:**
+  - Grid layout of saved components (Thumbnail + Name).
+  - "Delete" button per item.
+- [ ] **Export Engine:**
+  - Fetch all records from DB.
+  - Wrap in metadata (Dataset Version, Date).
+  - Trigger JSON file download (`Blob` + `URL.createObjectURL`).
+
+---
+
+## Phase 5: Polish & Deployment
+
+**Objective:** Refine the experience for stability and usability.
+
+### 5.1 Quality Assurance
+
+- [ ] **Iframe Handling:** Add error boundaries for Cross-Origin iframes (block selection or show warning).
+- [ ] **Theme Support:** Detect `chrome.devtools.panels.themeName` and apply Dark/Light CSS variables.
+- [ ] **Performance:** Ensure heavy screenshots don't freeze the DevTools UI (move logic to workers if needed).
+
+### 5.2 Documentation & Packaging
+
+- [ ] **Onboarding:** Add an "Empty State" to the library with instructions.
+- [ ] **Code Cleanup:** Remove all `console.log` and debugging artifacts.
+- [ ] **Zip & Ship:** Package the extension for distribution (Github Release or Web Store).
