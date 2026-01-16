@@ -36,6 +36,13 @@
       request.onsuccess = function() {
         dbInstance = request.result;
         console.log('IndexedDB: Database opened successfully');
+        
+        // Handle database connection closing unexpectedly
+        dbInstance.onclose = () => {
+            console.warn('IndexedDB: Database connection closed unexpectedly');
+            dbInstance = null;
+        };
+        
         resolve(dbInstance);
       };
 
@@ -74,20 +81,40 @@
 
       openDB()
         .then(function(db) {
-          const transaction = db.transaction([STORE_NAME], 'readwrite');
-          const objectStore = transaction.objectStore(STORE_NAME);
-          
-          const request = objectStore.put(data);
+          try {
+              const transaction = db.transaction([STORE_NAME], 'readwrite');
+              const objectStore = transaction.objectStore(STORE_NAME);
+              
+              const request = objectStore.put(data);
 
-          request.onsuccess = function() {
-            console.log('IndexedDB: Component saved successfully', data.id);
-            resolve(data.id);
-          };
+              request.onsuccess = function() {
+                console.log('IndexedDB: Component saved successfully', data.id);
+                resolve(data.id);
+              };
 
-          request.onerror = function() {
-            console.error('IndexedDB: Failed to save component', request.error);
-            reject(request.error);
-          };
+              request.onerror = function() {
+                const error = request.error;
+                if (error && (error.name === 'QuotaExceededError' || error.code === 22)) {
+                    console.error('IndexedDB: Storage quota exceeded');
+                    reject(new Error("Storage quota exceeded. Please delete some components to make space."));
+                } else {
+                    console.error('IndexedDB: Failed to save component', error);
+                    reject(error);
+                }
+              };
+              
+              transaction.onabort = function() {
+                  console.error('IndexedDB: Transaction aborted', transaction.error);
+                  if (transaction.error && (transaction.error.name === 'QuotaExceededError' || transaction.error.code === 22)) {
+                      reject(new Error("Storage quota exceeded. Please delete some components to make space."));
+                  } else {
+                      reject(transaction.error || new Error('Transaction aborted'));
+                  }
+              };
+          } catch (e) {
+              console.error('IndexedDB: Error creating transaction', e);
+              reject(e);
+          }
         })
         .catch(function(error) {
           reject(error);
@@ -103,21 +130,25 @@
     return new Promise(function(resolve, reject) {
       openDB()
         .then(function(db) {
-          const transaction = db.transaction([STORE_NAME], 'readonly');
-          const objectStore = transaction.objectStore(STORE_NAME);
-          
-          const request = objectStore.getAll();
+          try {
+              const transaction = db.transaction([STORE_NAME], 'readonly');
+              const objectStore = transaction.objectStore(STORE_NAME);
+              
+              const request = objectStore.getAll();
 
-          request.onsuccess = function() {
-            const components = request.result || [];
-            console.log('IndexedDB: Retrieved', components.length, 'components');
-            resolve(components);
-          };
+              request.onsuccess = function() {
+                const components = request.result || [];
+                console.log('IndexedDB: Retrieved', components.length, 'components');
+                resolve(components);
+              };
 
-          request.onerror = function() {
-            console.error('IndexedDB: Failed to retrieve components', request.error);
-            reject(request.error);
-          };
+              request.onerror = function() {
+                console.error('IndexedDB: Failed to retrieve components', request.error);
+                reject(request.error);
+              };
+          } catch (e) {
+              reject(e);
+          }
         })
         .catch(function(error) {
           reject(error);
@@ -139,20 +170,24 @@
 
       openDB()
         .then(function(db) {
-          const transaction = db.transaction([STORE_NAME], 'readwrite');
-          const objectStore = transaction.objectStore(STORE_NAME);
-          
-          const request = objectStore.delete(id);
+          try {
+              const transaction = db.transaction([STORE_NAME], 'readwrite');
+              const objectStore = transaction.objectStore(STORE_NAME);
+              
+              const request = objectStore.delete(id);
 
-          request.onsuccess = function() {
-            console.log('IndexedDB: Component deleted successfully', id);
-            resolve();
-          };
+              request.onsuccess = function() {
+                console.log('IndexedDB: Component deleted successfully', id);
+                resolve();
+              };
 
-          request.onerror = function() {
-            console.error('IndexedDB: Failed to delete component', request.error);
-            reject(request.error);
-          };
+              request.onerror = function() {
+                console.error('IndexedDB: Failed to delete component', request.error);
+                reject(request.error);
+              };
+          } catch (e) {
+              reject(e);
+          }
         })
         .catch(function(error) {
           reject(error);

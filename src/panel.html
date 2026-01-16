@@ -22,14 +22,69 @@
 
   <div class="library-container active" id="library-container">
     <div class="library-header">
-      <div class="library-title">Saved Components</div>
+      <div class="library-title-group">
+        <div class="library-title">Saved Components</div>
+        <span class="component-count-badge" id="component-count-badge">0</span>
+      </div>
+      <div class="view-options">
+        <button id="view-grid-btn" class="btn-icon active" title="Grid View">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+        </button>
+        <button id="view-list-btn" class="btn-icon" title="List View">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v4H4zm0 6h16v4H4zm0 6h16v4H4z"/></svg>
+        </button>
+      </div>
     </div>
-    <div class="library-grid" id="library-grid">
-      <!-- Library items will be dynamically inserted here -->
+    
+    <div class="library-toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="library-search-input" placeholder="Search components..." class="form-input search-input">
+      </div>
+      <div class="filter-controls">
+        <div class="filter-item">
+          <select id="library-filter-domain" class="form-select small" title="Filter by Domain">
+            <option value="">All Domains</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="library-filter-atomic" class="form-select small" title="Filter by Atomic Level">
+            <option value="">All Levels</option>
+            <option value="Atom">Atom</option>
+            <option value="Molecule">Molecule</option>
+            <option value="Organism">Organism</option>
+            <option value="Template">Template</option>
+            <option value="Page">Page</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="library-sort" class="form-select small" title="Sort By">
+            <option value="date-desc">Newest</option>
+            <option value="date-asc">Oldest</option>
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+          </select>
+        </div>
+        <button id="library-clear-filters" class="btn btn-secondary small" title="Clear Filters" style="display: none;">
+          Clear
+        </button>
+      </div>
     </div>
+
+    <div class="library-content grid-view" id="library-content">
+      <!-- Content dynamically injected here -->
+    </div>
+    
+    <div class="pagination-controls" id="pagination-controls" style="display: none;">
+      <button id="prev-page-btn" class="btn btn-secondary small" disabled>Previous</button>
+      <span id="page-info">Page 1</span>
+      <button id="next-page-btn" class="btn btn-secondary small" disabled>Next</button>
+    </div>
+
     <div class="library-empty" id="library-empty" style="display: none;">
-      <p>No components saved yet.</p>
-      <p>Click "Select Component" in the header to start capturing components.</p>
+      <div class="empty-state-icon">📭</div>
+      <p>No components found.</p>
+      <p class="sub-text">Try adjusting your filters or capture a new component.</p>
     </div>
   </div>
   

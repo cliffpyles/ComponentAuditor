@@ -16,6 +16,10 @@
   let overlayTooltip = null;
   let port = null;
   let currentTabId = null;
+  
+  // Performance throttling
+  let rafId = null;
+  let lastHoverTarget = null;
 
   /**
    * Initialize the content script
@@ -231,7 +235,21 @@
         : '';
       const dimensions = `${Math.round(rect.width)} × ${Math.round(rect.height)}`;
       
-      overlayTooltip.textContent = `${tagName}${id}${className} (${dimensions})`;
+      let tooltipText = `${tagName}${id}${className} (${dimensions})`;
+      
+      // Iframe warning
+      if (tagName === 'iframe') {
+        tooltipText += " [IFRAME: Content Inaccessible]";
+        overlay.style.borderColor = "#f9ab00"; // Warning color
+        overlayTooltip.style.backgroundColor = "#f9ab00";
+        overlayTooltip.style.color = "#202124";
+      } else {
+        overlay.style.borderColor = "#1a73e8";
+        overlayTooltip.style.backgroundColor = "#1a73e8";
+        overlayTooltip.style.color = "white";
+      }
+
+      overlayTooltip.textContent = tooltipText;
       
       // Adjust tooltip position if it goes off screen
       if (rect.top < 30) {
@@ -266,7 +284,18 @@
       return;
     }
 
-    updateOverlay(e.target);
+    // Performance throttling with requestAnimationFrame
+    lastHoverTarget = e.target;
+    
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+    }
+    
+    rafId = requestAnimationFrame(() => {
+        if (lastHoverTarget) {
+            updateOverlay(lastHoverTarget);
+        }
+    });
   }
   
   /**
@@ -663,6 +692,28 @@
     if (e.target === overlay || (overlay && overlay.contains(e.target))) {
       return;
     }
+
+    // EDGE CASE: If iframe, block selection and warn
+    if (e.target.tagName.toLowerCase() === 'iframe') {
+        alert("Cannot select content inside iframes directly due to security restrictions.");
+        return;
+    }
+
+    // EDGE CASE: Element removed from DOM
+    if (!document.body.contains(e.target)) {
+        console.warn("Element removed from DOM before selection could complete");
+        return;
+    }
+
+    // Get element's bounding rectangle
+    const rect = e.target.getBoundingClientRect();
+
+    // EDGE CASE: Zero dimensions
+    if (rect.width === 0 || rect.height === 0) {
+        console.warn("Selected element has zero dimensions");
+        alert("Cannot select invisible element (zero width/height).");
+        return;
+    }
     
     // Animate overlay before proceeding (Visual feedback)
     if (overlay) {
@@ -673,8 +724,6 @@
     // Save reference to selected element
     window.__CA_LAST_ELEMENT__ = e.target;
 
-    // Get element's bounding rectangle
-    const rect = e.target.getBoundingClientRect();
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
@@ -785,6 +834,12 @@
     const style = document.getElementById("__CA_CURSOR_STYLE__");
     if (style && style.parentNode) {
       style.parentNode.removeChild(style);
+    }
+
+    // Cancel any pending RAF
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
     }
 
     console.log("Component Auditor: Selection mode disabled");

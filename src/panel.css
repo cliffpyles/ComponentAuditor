@@ -200,6 +200,12 @@ h1 {
   background-color: var(--color-secondary-hover);
 }
 
+.btn.small {
+  padding: 4px 8px;
+  font-size: var(--font-size-xs);
+  height: 28px;
+}
+
 /* Empty State */
 .empty-state {
   flex: 1;
@@ -425,20 +431,7 @@ h1 {
   word-break: break-all;
 }
 
-/* Library View */
-.library-container {
-  display: none;
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-md);
-  background-color: var(--color-bg-secondary); /* Slight contrast */
-}
-
-.library-container.active {
-  display: flex;
-  flex-direction: column;
-}
-
+/* View Toggle (Main) */
 .view-toggle {
   display: flex;
   gap: var(--spacing-lg);
@@ -469,11 +462,34 @@ h1 {
   border-bottom-color: var(--color-primary);
 }
 
+/* Library View - NEW STYLES START HERE */
+
+.library-container {
+  display: none;
+  flex: 1;
+  overflow-y: hidden; /* Changed to hidden to allow internal scrolling */
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-secondary);
+}
+
+.library-container.active {
+  display: flex;
+  flex-direction: column;
+}
+
 .library-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.library-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .library-title {
@@ -482,108 +498,325 @@ h1 {
   color: var(--color-text-primary);
 }
 
-.library-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--spacing-md);
+.component-count-badge {
+  background-color: var(--color-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
-.library-item {
+.view-options {
+  display: flex;
+  gap: 2px;
+  background-color: var(--color-bg-surface-hover);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 2px;
+  color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  width: 28px;
+  height: 28px;
+}
+
+.btn-icon:hover {
+  color: var(--color-text-primary);
+  background-color: rgba(0,0,0,0.05);
+}
+
+.btn-icon.active {
+  color: var(--color-primary);
+  background-color: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.library-toolbar {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  align-items: center;
+  background-color: var(--color-bg-surface);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.search-box {
+  flex: 1;
+  position: relative;
+  min-width: 200px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.search-input {
+  padding-left: 32px !important;
+  height: 32px;
+  font-size: var(--font-size-sm);
+}
+
+.filter-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.form-select.small {
+  height: 32px;
+  padding: 0 24px 0 8px;
+  font-size: var(--font-size-sm);
+  min-width: 120px;
+  max-width: 160px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* Library Content */
+.library-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 2px; /* Prevent outline clipping */
+}
+
+/* Grid View */
+.library-content.grid-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--spacing-md);
+  align-content: start;
+}
+
+.grid-view .library-item {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--color-bg-surface);
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  transition: all var(--transition-fast);
   cursor: pointer;
-  position: relative;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
-.library-item:hover {
+.grid-view .library-item:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
   border-color: var(--color-primary);
+  transform: translateY(-2px);
 }
 
-.library-item-thumbnail {
+.grid-view .library-item-thumbnail {
   width: 100%;
-  height: 140px;
+  height: 120px;
   background: var(--color-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  position: relative;
-  padding: var(--spacing-sm);
+  padding: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.library-item-thumbnail img {
+.grid-view .library-item-thumbnail img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
 
-.library-item-info {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
+.grid-view .library-item-info {
+  padding: var(--spacing-sm);
 }
 
-.library-item-name {
+.grid-view .library-item-name {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.library-item-meta {
-  font-size: var(--font-size-xs);
+.grid-view .library-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
   color: var(--color-text-tertiary);
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.meta-badge {
+  background-color: var(--color-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* List View */
+.library-content.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background-color: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.list-view .library-item {
+  display: grid;
+  grid-template-columns: 40px 2fr 1fr 1fr 1fr 40px;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-surface);
+  cursor: pointer;
+  height: 48px;
+}
+
+.list-view .library-item:hover {
+  background-color: var(--color-bg-surface-hover);
+}
+
+.list-view .library-item-thumbnail {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary);
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+}
+
+.list-view .library-item-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.list-view .library-item-info {
+  display: contents;
+}
+
+.list-view .library-item-name {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-view .library-item-meta {
+  display: contents;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 .library-item-delete {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   width: 24px;
   height: 24px;
   border: none;
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
+  background: transparent;
+  color: var(--color-text-tertiary);
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  opacity: 0;
-  transition: opacity var(--transition-fast), background var(--transition-fast);
-  z-index: 10;
+  transition: all var(--transition-fast);
+  justify-self: end;
 }
 
-.library-item:hover .library-item-delete {
+.grid-view .library-item-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255,255,255,0.9);
+  opacity: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.grid-view .library-item:hover .library-item-delete {
   opacity: 1;
 }
 
 .library-item-delete:hover {
   background: var(--color-error);
+  color: white;
 }
 
-.library-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--color-text-secondary);
+/* Pagination */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  margin-top: auto;
+  flex-shrink: 0;
+  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-sm);
   background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--color-border);
+}
+
+#page-info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Empty State (Library) */
+.library-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.empty-state-icon {
+  font-size: 32px;
+  margin-bottom: var(--spacing-sm);
+  opacity: 0.5;
+}
+
+.sub-text {
+  font-size: var(--font-size-xs);
+  margin-top: 4px;
 }
 
 /* Settings View */

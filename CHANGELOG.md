@@ -5,6 +5,45 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-01-16
+
+### Added
+
+#### Phase 5: Stability & Feature Completeness
+
+- **Library Management**
+
+  - Added search functionality to filter components by name, domain, or route.
+  - Implemented filtering system (by Domain and Atomic Level).
+  - Added sorting options (Date: Newest/Oldest, Name: A-Z/Z-A).
+  - Added "Clear Filters" action to reset view.
+  - Implemented informative empty states for search results.
+
+- **Robust Capture Handling**
+
+  - Added iframe detection and warning (blocks selection inside iframes due to security).
+  - Implemented checks for zero-dimension elements (prevents capturing invisible elements).
+  - Added check for elements removed from DOM during capture.
+  - Improved performance of hover highlighting using `requestAnimationFrame` throttling.
+
+- **Data Validation & Integrity**
+
+  - Implemented comprehensive `validateSchema` function in `panel.js`.
+  - Ensures all captured components meet strict data quality standards before saving.
+  - Validates ID, Label, Meta, Visuals, Code, and Semantic fields.
+  - Checks for valid dimensions and content.
+
+- **Error Handling & Resilience**
+
+  - Enhanced IndexedDB error handling for storage quota limits.
+  - Added user-friendly toast notifications for specific error scenarios (Quota Exceeded, Validation Errors).
+  - Improved connection failure recovery mechanisms.
+
+- **UX Polish**
+  - Added `loading="lazy"` to library thumbnails for better performance with large datasets.
+  - Improved keyboard navigation (ESC key cancels selection mode).
+  - Refined empty state messaging.
+
 ## [1.8.0] - 2026-01-16
 
 ### Added
