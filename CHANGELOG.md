@@ -34,3 +34,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DevTools Integration Setup**
   - Created `devtools.html` entry point for DevTools panel initialization
   - Set up basic HTML structure with reference to `src/devtools.js`
+
+#### Phase 1.2: DevTools Integration
+
+- **Panel Entry Point**
+
+  - Created `src/devtools.js` to initialize the DevTools panel using `chrome.devtools.panels.create` API
+  - Implemented panel creation with title "Component Lab"
+  - Set up panel visibility handlers (`onShown` and `onHidden` events)
+  - Created `src/panel.html` as the panel UI entry point
+  - Created `src/panel.js` for panel UI script initialization
+
+- **Connection Handshake**
+  - Implemented `src/background.js` service worker as communication bridge
+  - Added `chrome.runtime.onConnect` listener to handle connections from DevTools panel and content scripts
+  - Implemented connection storage by `tabId` using a `Map` data structure
+  - Added message routing system to handle different message types:
+    - `DEVTOOLS_CONNECTED` - Initial connection from DevTools panel
+    - `PANEL_SHOWN` - Panel visibility state changes
+    - `PANEL_HIDDEN` - Panel visibility state changes
+    - `ELEMENT_SELECTED` - Element selection events (for future use)
+    - `CONTENT_SCRIPT_READY` - Content script initialization
+  - Implemented `onDisconnect` handler to trigger cleanup when DevTools closes (safety switch)
+  - Added message forwarding from content scripts to DevTools panel
+  - Implemented cleanup notifications to content scripts when DevTools panel disconnects

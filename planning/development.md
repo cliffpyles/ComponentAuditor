@@ -19,8 +19,8 @@
 
 ### 1.2 DevTools Integration
 
-- [ ] **Panel Entry Point:** Create `devtools.html` and `devtools.js` to initialize the `chrome.devtools.panels.create` API.
-- [ ] **The "Handshake":** Implement the connection logic in `background.js`.
+- [x] **Panel Entry Point:** Create `devtools.html` and `devtools.js` to initialize the `chrome.devtools.panels.create` API.
+- [x] **The "Handshake":** Implement the connection logic in `background.js`.
   - Listen for `chrome.runtime.onConnect`.
   - Store open connections by `tabId`.
   - Handle `onDisconnect` to trigger cleanup (safety switch).
