@@ -68,8 +68,8 @@
 
 ### 2.3 Token Analysis (Computed Styles)
 
-- [ ] **Style Reader:** Use `window.getComputedStyle(element)`.
-- [ ] **Token Mapping:**
+- [x] **Style Reader:** Use `window.getComputedStyle(element)`.
+- [x] **Token Mapping:**
   - **Color:** Extract `color`, `background-color`, `border-color`.
   - **Type:** Extract `font-family`, `font-size`, `font-weight`, `line-height`.
   - **Spacing:** Extract `padding` (top/right/bottom/left) and `margin`.

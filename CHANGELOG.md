@@ -5,6 +5,40 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-16
+
+### Added
+
+#### Phase 2.3: Token Analysis (Computed Styles)
+
+- **Style Reader**
+  - Implemented `extractTokens()` function in content script to extract computed styles using `window.getComputedStyle(element)`
+  - Token extraction is performed automatically when an element is selected
+  - Extracted tokens are included in the `ELEMENT_SELECTED` message payload
+
+- **Token Mapping**
+  - **Color Tokens:** Extracts `color`, `background-color`, and `border-color` from computed styles
+    - Filters out transparent and zero-alpha colors
+    - Stores color values with their type (color, background-color, border-color)
+  - **Typography Tokens:** Extracts `font-family`, `font-size`, `font-weight`, and `line-height`
+    - Filters out "normal" line-height values
+    - Stores typography values with their type for easy identification
+  - **Spacing Tokens:** Extracts padding and margin values for all four sides (top, right, bottom, left)
+    - Provides complete spacing context for layout analysis
+    - Defaults to "0px" if values are not set
+  - **Border Tokens:** Extracts `border-radius`, `border-width`, and `border-style`
+    - Only includes border-radius and border-width if they are non-zero
+    - Includes border-style when not "none"
+  - **Effects Tokens:** Extracts `box-shadow` and `opacity`
+    - Stores box-shadow values as an array (supports multiple shadows)
+    - Only includes opacity if it differs from 1
+
+- **Data Integration**
+  - Token data is included in the `code` object alongside HTML, lineage, and siblings
+  - Panel script stores token data in `window.__CA_EXTRACTED_CODE__` for Phase 4 editor integration
+  - Status messages now indicate when tokens have been extracted
+  - Token extraction handles errors gracefully with try-catch blocks
+
 ## [1.2.0] - 2026-01-16
 
 ### Added

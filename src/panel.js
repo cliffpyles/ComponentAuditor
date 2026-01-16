@@ -261,10 +261,14 @@
           const codeData = pendingElement.code || {};
           const hasLineage = codeData.lineage && codeData.lineage.length > 0;
           const hasSiblings = codeData.siblings && (codeData.siblings.previousSibling || codeData.siblings.nextSibling);
+          const tokens = codeData.tokens || {};
+          const hasTokens = tokens.colors || tokens.fonts || tokens.spacing || tokens.border || tokens.shadows;
+          
           const codeInfo = [];
           if (codeData.html) codeInfo.push('HTML');
           if (hasLineage) codeInfo.push(`${codeData.lineage.length} ancestors`);
           if (hasSiblings) codeInfo.push('siblings');
+          if (hasTokens) codeInfo.push('tokens');
           
           let statusText = `Element captured: ${element.tagName}${element.className ? '.' + element.className.split(' ')[0] : ''}${element.id ? '#' + element.id : ''}`;
           if (codeInfo.length > 0) {

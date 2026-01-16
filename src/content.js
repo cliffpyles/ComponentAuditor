@@ -299,6 +299,116 @@
   }
 
   /**
+   * Extract computed style tokens from an element
+   * @param {Element} element - The element to extract tokens from
+   * @returns {Object} - Object containing color, typography, spacing, and effects tokens
+   */
+  function extractTokens(element) {
+    const tokens = {
+      colors: [],
+      fonts: [],
+      spacing: {},
+      border: {},
+      shadows: [],
+      opacity: null,
+    };
+
+    try {
+      const computedStyle = window.getComputedStyle(element);
+
+      // Extract color tokens
+      const color = computedStyle.color;
+      const backgroundColor = computedStyle.backgroundColor;
+      const borderColor = computedStyle.borderColor;
+
+      if (color && color !== "rgba(0, 0, 0, 0)" && color !== "transparent") {
+        tokens.colors.push({ type: "color", value: color });
+      }
+      if (backgroundColor && backgroundColor !== "rgba(0, 0, 0, 0)" && backgroundColor !== "transparent") {
+        tokens.colors.push({ type: "background-color", value: backgroundColor });
+      }
+      if (borderColor && borderColor !== "rgba(0, 0, 0, 0)" && borderColor !== "transparent") {
+        tokens.colors.push({ type: "border-color", value: borderColor });
+      }
+
+      // Extract typography tokens
+      const fontFamily = computedStyle.fontFamily;
+      const fontSize = computedStyle.fontSize;
+      const fontWeight = computedStyle.fontWeight;
+      const lineHeight = computedStyle.lineHeight;
+
+      if (fontFamily) {
+        tokens.fonts.push({ type: "font-family", value: fontFamily });
+      }
+      if (fontSize) {
+        tokens.fonts.push({ type: "font-size", value: fontSize });
+      }
+      if (fontWeight) {
+        tokens.fonts.push({ type: "font-weight", value: fontWeight });
+      }
+      if (lineHeight && lineHeight !== "normal") {
+        tokens.fonts.push({ type: "line-height", value: lineHeight });
+      }
+
+      // Extract spacing tokens (padding and margin)
+      const paddingTop = computedStyle.paddingTop;
+      const paddingRight = computedStyle.paddingRight;
+      const paddingBottom = computedStyle.paddingBottom;
+      const paddingLeft = computedStyle.paddingLeft;
+      const marginTop = computedStyle.marginTop;
+      const marginRight = computedStyle.marginRight;
+      const marginBottom = computedStyle.marginBottom;
+      const marginLeft = computedStyle.marginLeft;
+
+      tokens.spacing = {
+        padding: {
+          top: paddingTop || "0px",
+          right: paddingRight || "0px",
+          bottom: paddingBottom || "0px",
+          left: paddingLeft || "0px",
+        },
+        margin: {
+          top: marginTop || "0px",
+          right: marginRight || "0px",
+          bottom: marginBottom || "0px",
+          left: marginLeft || "0px",
+        },
+      };
+
+      // Extract border tokens
+      const borderRadius = computedStyle.borderRadius;
+      const borderWidth = computedStyle.borderWidth;
+      const borderStyle = computedStyle.borderStyle;
+
+      if (borderRadius && borderRadius !== "0px") {
+        tokens.border.radius = borderRadius;
+      }
+      if (borderWidth && borderWidth !== "0px") {
+        tokens.border.width = borderWidth;
+      }
+      if (borderStyle && borderStyle !== "none") {
+        tokens.border.style = borderStyle;
+      }
+
+      // Extract effects tokens
+      const boxShadow = computedStyle.boxShadow;
+      const opacity = computedStyle.opacity;
+
+      if (boxShadow && boxShadow !== "none") {
+        tokens.shadows.push(boxShadow);
+      }
+
+      if (opacity && opacity !== "1") {
+        tokens.opacity = opacity;
+      }
+    } catch (error) {
+      console.warn("Component Auditor: Error extracting tokens", error);
+    }
+
+    return tokens;
+  }
+
+  /**
    * Handle click event for element selection
    */
   function handleClick(e) {
@@ -323,10 +433,11 @@
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
-    // Extract HTML, lineage, and siblings
+    // Extract HTML, lineage, siblings, and tokens
     const html = extractHTML(e.target);
     const lineage = extractLineage(e.target);
     const siblings = extractSiblings(e.target);
+    const tokens = extractTokens(e.target);
 
     // Prepare the selection message
     const selectionMessage = {
@@ -350,6 +461,7 @@
         html: html,
         lineage: lineage,
         siblings: siblings,
+        tokens: tokens,
       },
     };
 
