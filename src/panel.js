@@ -507,7 +507,10 @@
         .then((id) => {
           showToast("Component saved successfully!", "success");
           loadLibrary();
-          setTimeout(hideEditor, 1000);
+          setTimeout(() => {
+            hideEditor();
+            showLibraryView();
+          }, 1000);
         })
         .catch((error) => {
           console.error("Save failed", error);
