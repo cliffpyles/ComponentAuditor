@@ -449,35 +449,35 @@
       // Method 3: Check DOM for React-specific root elements and data attributes
       if (!hasReact) {
         // Check for React-specific data attributes first (most reliable)
-        const reactDataAttr = document.querySelector("[data-reactroot]") ||
-                             document.querySelector("[data-react-helmet]") ||
-                             document.querySelector("[data-react-class]");
-        
+        const reactDataAttr =
+          document.querySelector("[data-reactroot]") ||
+          document.querySelector("[data-react-helmet]") ||
+          document.querySelector("[data-react-class]");
+
         if (reactDataAttr) {
           hasReact = true;
         } else {
           // Check for common React root IDs (less reliable, but common pattern)
-          const reactRoot = document.querySelector("#root") ||
-                           document.querySelector("#app") ||
-                           document.querySelector("#react-root");
-          
+          const reactRoot =
+            document.querySelector("#root") || document.querySelector("#app") || document.querySelector("#react-root");
+
           // If we find a common React root, check if it has React fiber properties
           // (though these might not be accessible in content script context)
           if (reactRoot) {
             // Additional check: look for React-specific patterns in the DOM
             // React often uses data attributes or specific class patterns
-            const hasReactPatterns = document.querySelector("[data-testid]") ||
-                                     document.querySelector("[class*='react']") ||
-                                     document.querySelector("[class*='React']");
-            
+            const hasReactPatterns =
+              document.querySelector("[data-testid]") ||
+              document.querySelector("[class*='react']") ||
+              document.querySelector("[class*='React']");
+
             // If we find root AND React patterns, it's likely React
             if (hasReactPatterns) {
               hasReact = true;
             } else {
               // If root exists but no patterns, still consider it React if no Angular indicators
               // (heuristic: most modern apps using #root are React)
-              const hasAngularIndicators = document.querySelector("[ng-version]") ||
-                                          document.querySelector("[ng-app]");
+              const hasAngularIndicators = document.querySelector("[ng-version]") || document.querySelector("[ng-app]");
               if (!hasAngularIndicators) {
                 hasReact = true;
               }
@@ -603,7 +603,7 @@
       // Angular Detection
       // Skip Angular detection if React is already detected (to avoid false positives)
       let hasAngular = false;
-      
+
       // Only proceed with Angular detection if React wasn't detected
       // (React apps sometimes have generic element names that could match Angular patterns)
       if (!hasReact) {
@@ -622,15 +622,16 @@
             hasAngular = true;
           }
         }
-        
+
         // Method 2b: Check for ng-app (AngularJS specific)
         if (!hasAngular) {
           const ngAppElement = document.querySelector("[ng-app]");
           if (ngAppElement) {
             // Double-check it's actually Angular by looking for Angular-specific patterns
-            const hasAngularPatterns = document.querySelector("[ng-controller]") ||
-                                      document.querySelector("[ng-repeat]") ||
-                                      document.querySelector("[ng-if]");
+            const hasAngularPatterns =
+              document.querySelector("[ng-controller]") ||
+              document.querySelector("[ng-repeat]") ||
+              document.querySelector("[ng-if]");
             if (hasAngularPatterns) {
               detected.push("AngularJS");
               hasAngular = true;
@@ -658,7 +659,7 @@
             }
           }
         }
-        
+
         // Method 5: Check inline scripts for Angular references
         if (!hasAngular) {
           const inlineScripts = document.querySelectorAll("script:not([src])");

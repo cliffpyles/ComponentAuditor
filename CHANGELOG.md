@@ -5,6 +5,30 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-01-16
+
+### Fixed
+
+- **Framework Detection Improvements**
+  - Fixed false positive Angular detection that was incorrectly identifying React apps as Angular
+  - Removed generic element selectors (`app-root`, `ng-component`) from Angular detection that were too broad
+  - Made Angular detection conditional - only runs if React is not already detected to prevent false positives
+  - Improved React detection to be more reliable:
+    - Enhanced React DevTools hook detection to catch cases where hook exists but renderers aren't populated
+    - Improved DOM pattern detection for React-specific data attributes (`data-reactroot`, `data-react-helmet`, `data-react-class`)
+    - Added checks for React-specific patterns like `data-testid` and React class patterns
+    - Better root element detection with pattern verification
+  - Fixed Angular detection bug where `window.ng.probe` could throw an error if `window.ng` was undefined
+  - Added comprehensive debugging logs to help diagnose framework detection issues
+
+### Changed
+
+- **Framework Detection Logic**
+  - React detection now takes priority over Angular detection to avoid conflicts
+  - Angular detection now only uses reliable indicators: `ng-version` attribute and verified `ng-app` patterns
+  - Improved Vue detection to check for `data-v-*` scoped style attributes more thoroughly
+  - Enhanced Tailwind detection with better pattern matching and performance optimizations
+
 ## [1.4.0] - 2026-01-16
 
 ### Added
