@@ -409,6 +409,96 @@
   }
 
   /**
+   * Detect frameworks and libraries used on the page
+   * @returns {Array<string>} - Array of detected framework/library names
+   */
+  function detectFrameworks() {
+    const detected = [];
+
+    try {
+      // Scan window object for framework indicators
+      if (window.React || window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+        detected.push("React");
+      }
+      if (window.Vue || window.__VUE__) {
+        detected.push("Vue");
+      }
+      if (window.angular || window.ng) {
+        detected.push("Angular");
+      }
+      if (window.jQuery || window.$) {
+        detected.push("jQuery");
+      }
+      if (window.webpack || window.__webpack_require__) {
+        detected.push("webpack");
+      }
+
+      // Scan DOM for framework-specific attributes
+      if (document.querySelector("[data-reactroot]") || document.querySelector("[data-react-helmet]")) {
+        if (!detected.includes("React")) {
+          detected.push("React");
+        }
+      }
+      if (document.querySelector("[ng-version]") || document.querySelector("[ng-app]")) {
+        if (!detected.includes("Angular")) {
+          detected.push("Angular");
+        }
+      }
+      if (document.querySelector("[data-v-]") || document.querySelector("[v-cloak]")) {
+        if (!detected.includes("Vue")) {
+          detected.push("Vue");
+        }
+      }
+
+      // Detect CSS frameworks by class patterns
+      if (document.querySelector(".bootstrap") || document.querySelector("[class*='col-']")) {
+        detected.push("Bootstrap");
+      }
+      if (document.querySelector("[class*='tailwind']") || document.querySelector("[class*='tw-']")) {
+        detected.push("Tailwind");
+      }
+      if (document.querySelector("[class*='mui-']") || document.querySelector("[class*='Mui']")) {
+        detected.push("Material-UI");
+      }
+    } catch (error) {
+      console.warn("Component Auditor: Error detecting frameworks", error);
+    }
+
+    return detected;
+  }
+
+  /**
+   * Parse URL into route and query parameters
+   * @returns {Object} - Object with route (pathname) and queryParams (parsed search params)
+   */
+  function parseURL() {
+    try {
+      const location = window.location;
+      const route = location.pathname || "/";
+      
+      // Parse query parameters
+      const queryParams = {};
+      if (location.search) {
+        const searchParams = new URLSearchParams(location.search);
+        for (const [key, value] of searchParams.entries()) {
+          queryParams[key] = value;
+        }
+      }
+
+      return {
+        route: route,
+        queryParams: queryParams,
+      };
+    } catch (error) {
+      console.warn("Component Auditor: Error parsing URL", error);
+      return {
+        route: window.location.pathname || "/",
+        queryParams: {},
+      };
+    }
+  }
+
+  /**
    * Handle click event for element selection
    */
   function handleClick(e) {
@@ -439,6 +529,10 @@
     const siblings = extractSiblings(e.target);
     const tokens = extractTokens(e.target);
 
+    // Extract context awareness data (framework detection and URL parsing)
+    const frameworks = detectFrameworks();
+    const urlData = parseURL();
+
     // Prepare the selection message
     const selectionMessage = {
       type: "ELEMENT_SELECTED",
@@ -462,6 +556,13 @@
         lineage: lineage,
         siblings: siblings,
         tokens: tokens,
+      },
+      meta: {
+        frameworks: frameworks,
+        route: urlData.route,
+        queryParams: urlData.queryParams,
+        domain: window.location.hostname,
+        timestamp: new Date().toISOString(),
       },
     };
 

@@ -77,10 +77,10 @@
 
 ### 2.4 Context Awareness
 
-- [ ] **Framework Detection:**
+- [x] **Framework Detection:**
   - Scan `window` for keys: `React`, `Vue`, `jQuery`, `webpack`.
   - Scan DOM for attributes: `data-reactroot`, `ng-version`.
-- [ ] **URL Parser:**
+- [x] **URL Parser:**
   - Parse `window.location`.
   - Separate `pathname` (Route) from `search` (Query Params).
 

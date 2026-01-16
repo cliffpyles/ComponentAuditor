@@ -199,13 +199,15 @@
     // Stop selection mode
     stopSelectionMode();
 
-    // Store element info, rect, and code data for later use
+    // Store element info, rect, code data, and meta data for later use
     const elementInfo = message.element;
     const elementRect = message.rect;
     const codeData = message.code || {};
+    const metaData = message.meta || {};
 
     console.log('Element selected:', elementInfo, elementRect);
     console.log('Code data extracted:', codeData);
+    console.log('Meta data extracted:', metaData);
 
     // Request screenshot from background script
     if (port && tabId) {
@@ -218,7 +220,8 @@
       window.__CA_PENDING_ELEMENT__ = {
         element: elementInfo,
         rect: elementRect,
-        code: codeData
+        code: codeData,
+        meta: metaData
       };
     } else {
       console.error('Panel: Cannot request screenshot - port or tabId not available');
@@ -252,23 +255,27 @@
       .then(function(croppedDataUrl) {
         console.log('Panel: Screenshot cropped successfully');
         
-        // Store the cropped screenshot and code data (will be used in Phase 4 for the editor)
+        // Store the cropped screenshot, code data, and meta data (will be used in Phase 4 for the editor)
         window.__CA_CROPPED_SCREENSHOT__ = croppedDataUrl;
         window.__CA_EXTRACTED_CODE__ = pendingElement.code || {};
+        window.__CA_EXTRACTED_META__ = pendingElement.meta || {};
         
         if (statusMessage) {
           const element = pendingElement.element;
           const codeData = pendingElement.code || {};
+          const metaData = pendingElement.meta || {};
           const hasLineage = codeData.lineage && codeData.lineage.length > 0;
           const hasSiblings = codeData.siblings && (codeData.siblings.previousSibling || codeData.siblings.nextSibling);
           const tokens = codeData.tokens || {};
           const hasTokens = tokens.colors || tokens.fonts || tokens.spacing || tokens.border || tokens.shadows;
+          const frameworks = metaData.frameworks || [];
           
           const codeInfo = [];
           if (codeData.html) codeInfo.push('HTML');
           if (hasLineage) codeInfo.push(`${codeData.lineage.length} ancestors`);
           if (hasSiblings) codeInfo.push('siblings');
           if (hasTokens) codeInfo.push('tokens');
+          if (frameworks.length > 0) codeInfo.push(`${frameworks.length} framework(s)`);
           
           let statusText = `Element captured: ${element.tagName}${element.className ? '.' + element.className.split(' ')[0] : ''}${element.id ? '#' + element.id : ''}`;
           if (codeInfo.length > 0) {

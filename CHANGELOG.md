@@ -5,6 +5,33 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-16
+
+### Added
+
+#### Phase 2.4: Context Awareness
+
+- **Framework Detection**
+  - Implemented `detectFrameworks()` function in content script to automatically detect frameworks and libraries used on the page
+  - Scans `window` object for framework indicators: `React`, `Vue`, `Angular`, `jQuery`, and `webpack`
+  - Scans DOM for framework-specific attributes: `data-reactroot`, `ng-version`, `data-v-`, `v-cloak`
+  - Detects CSS frameworks by class patterns: `Bootstrap`, `Tailwind`, and `Material-UI`
+  - Framework detection results are included in the `ELEMENT_SELECTED` message payload
+
+- **URL Parser**
+  - Implemented `parseURL()` function in content script to parse the current page URL
+  - Separates `pathname` (Route) from `search` (Query Params) using `URLSearchParams` API
+  - Extracts domain name from `window.location.hostname`
+  - Includes ISO 8601 timestamp for each capture
+  - URL data is included in the `meta` object of the `ELEMENT_SELECTED` message
+
+- **Data Integration**
+  - Context awareness data is included in the `meta` object alongside element, rect, and code data
+  - Meta data includes: `frameworks` (array), `route` (string), `queryParams` (object), `domain` (string), and `timestamp` (ISO string)
+  - Panel script stores meta data in `window.__CA_EXTRACTED_META__` for Phase 4 editor integration
+  - Status messages now display framework count when frameworks are detected
+  - All context data is automatically captured when an element is selected
+
 ## [1.3.0] - 2026-01-16
 
 ### Added
