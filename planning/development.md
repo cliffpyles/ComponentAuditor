@@ -135,10 +135,10 @@
 
 ### 4.3 Library & Export
 
-- [ ] **Library View:**
+- [x] **Library View:**
   - Grid layout of saved components (Thumbnail + Name).
   - "Delete" button per item.
-- [ ] **Export Engine:**
+- [x] **Export Engine:**
   - Fetch all records from DB.
   - Wrap in metadata (Dataset Version, Date).
   - Trigger JSON file download (`Blob` + `URL.createObjectURL`).

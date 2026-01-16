@@ -10,7 +10,7 @@
 
   // Create the DevTools panel
   chrome.devtools.panels.create(
-    'Component Lab',           // Panel title
+    'Component Auditor',           // Panel title
     'assets/icon-16.png',      // Icon (optional, will use default if not found)
     'src/panel.html',          // Panel HTML file
     function(panel) {
@@ -53,7 +53,7 @@
 
       // Handle panel visibility changes
       panel.onShown.addListener(function(panelWindow) {
-        console.log('Component Lab panel shown');
+        console.log('Component Auditor panel shown');
         window.panelWindow = panelWindow;
         
         // Notify background that panel is active
@@ -66,7 +66,7 @@
       });
 
       panel.onHidden.addListener(function() {
-        console.log('Component Lab panel hidden');
+        console.log('Component Auditor panel hidden');
         
         // Notify background that panel is hidden
         if (port) {

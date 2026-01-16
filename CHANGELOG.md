@@ -5,6 +5,51 @@ All notable changes to the Component Auditor project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-01-16
+
+### Added
+
+#### Phase 4.3: Library & Export
+
+- **Library View**
+
+  - Implemented grid layout for displaying saved components in the DevTools panel
+  - Each library item displays component thumbnail, name, atomic level, and timestamp
+  - Responsive grid layout that adapts to panel size (auto-fill with minimum 200px columns)
+  - Empty state message when no components are saved
+  - View toggle buttons to switch between "Library" and "Capture" views
+  - Library view automatically loads and displays all saved components on initialization
+  - Library view refreshes automatically after saving a new component
+
+- **Component Management**
+
+  - Delete button on each library item (red × button in top-right corner)
+  - Confirmation dialog before deleting components
+  - Automatic library refresh after successful deletion
+  - Error handling with user-friendly error messages for delete operations
+
+- **Export Engine**
+
+  - Export button in header (enabled only when components are saved)
+  - Exports all saved components as a single JSON dataset file
+  - Dataset includes metadata wrapper:
+    - `version`: Dataset version (1.0)
+    - `exportDate`: ISO 8601 timestamp of export
+    - `componentCount`: Number of components in the dataset
+    - `components`: Array of all component records
+  - Automatic file download with descriptive filename: `component-auditor-dataset-YYYY-MM-DD.json`
+  - Uses `Blob` and `URL.createObjectURL` for efficient file download
+  - Success message displayed after successful export
+  - All component data (screenshots, code, meta, semantics) included in export
+
+- **UI Enhancements**
+
+  - Added view toggle navigation between Library and Capture views
+  - Export button styling matches DevTools design patterns
+  - Library grid items with hover effects for better UX
+  - Component thumbnails displayed at 150px height with proper aspect ratio
+  - Clean, modern library interface matching existing panel design
+
 ## [1.6.0] - 2026-01-16
 
 ### Added
@@ -367,7 +412,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Panel Entry Point**
 
   - Created `src/devtools.js` to initialize the DevTools panel using `chrome.devtools.panels.create` API
-  - Implemented panel creation with title "Component Lab"
+  - Implemented panel creation with title "Component Auditor"
   - Set up panel visibility handlers (`onShown` and `onHidden` events)
   - Created `src/panel.html` as the panel UI entry point
   - Created `src/panel.js` for panel UI script initialization

@@ -19,7 +19,7 @@ It allows users (Data Scientists, UI Engineers, and Researchers) to manually ins
 
 ### The "Labeling" Workflow
 
-1.  **Activation:** The user opens Chrome DevTools (F12) and navigates to the "Component Lab" panel.
+1.  **Activation:** The user opens Chrome DevTools (F12) and navigates to the "Component Auditor" panel.
 2.  **Targeting:** The user clicks "Select Component." The extension injects an overlay into the DOM, mimicking the native Chrome Inspector.
 3.  **Capture:** The user clicks an element (e.g., a specific "Card" or "Button"). The extension instantly freezes the state of that element.
 4.  **Enrichment:**

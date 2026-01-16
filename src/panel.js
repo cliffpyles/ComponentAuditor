@@ -55,6 +55,15 @@
       toggleSelectionMode();
     });
 
+    // Setup view toggle buttons
+    setupViewToggle();
+
+    // Setup export button
+    setupExportButton();
+
+    // Load library view on initialization
+    loadLibrary();
+
     // Listen for messages from devtools.js (if needed for future features)
     window.addEventListener('message', function(event) {
       // Only accept messages from our extension
@@ -559,6 +568,9 @@
             statusMessage.style.color = '#34a853';
           }
           
+          // Refresh library view
+          loadLibrary();
+          
           // Hide editor and return to empty state after a brief delay
           setTimeout(function() {
             hideEditor();
@@ -687,6 +699,286 @@
         reject(error);
       }
     });
+  }
+
+  /**
+   * Setup view toggle buttons (Library vs Capture)
+   */
+  function setupViewToggle() {
+    const viewLibraryBtn = document.getElementById('view-library-btn');
+    const viewCaptureBtn = document.getElementById('view-capture-btn');
+    const emptyState = document.getElementById('empty-state');
+    const libraryContainer = document.getElementById('library-container');
+    const editorContainer = document.getElementById('editor-container');
+    
+    if (viewLibraryBtn) {
+      viewLibraryBtn.addEventListener('click', function() {
+        showLibraryView();
+      });
+    }
+    
+    if (viewCaptureBtn) {
+      viewCaptureBtn.addEventListener('click', function() {
+        showCaptureView();
+      });
+    }
+  }
+
+  /**
+   * Show library view
+   */
+  function showLibraryView() {
+    const viewLibraryBtn = document.getElementById('view-library-btn');
+    const viewCaptureBtn = document.getElementById('view-capture-btn');
+    const emptyState = document.getElementById('empty-state');
+    const libraryContainer = document.getElementById('library-container');
+    const editorContainer = document.getElementById('editor-container');
+    
+    // Update button states
+    if (viewLibraryBtn) viewLibraryBtn.classList.add('active');
+    if (viewCaptureBtn) viewCaptureBtn.classList.remove('active');
+    
+    // Show library, hide other views
+    if (emptyState) emptyState.style.display = 'none';
+    if (libraryContainer) libraryContainer.classList.add('active');
+    if (editorContainer) editorContainer.classList.remove('active');
+    
+    // Load library if not already loaded
+    loadLibrary();
+  }
+
+  /**
+   * Show capture view (default view)
+   */
+  function showCaptureView() {
+    const viewLibraryBtn = document.getElementById('view-library-btn');
+    const viewCaptureBtn = document.getElementById('view-capture-btn');
+    const emptyState = document.getElementById('empty-state');
+    const libraryContainer = document.getElementById('library-container');
+    const editorContainer = document.getElementById('editor-container');
+    
+    // Update button states
+    if (viewLibraryBtn) viewLibraryBtn.classList.remove('active');
+    if (viewCaptureBtn) viewCaptureBtn.classList.add('active');
+    
+    // Show empty state if editor is not active, otherwise keep editor visible
+    if (emptyState && !editorContainer.classList.contains('active')) {
+      emptyState.style.display = 'flex';
+    }
+    if (libraryContainer) libraryContainer.classList.remove('active');
+  }
+
+  /**
+   * Load and display saved components in the library view
+   */
+  function loadLibrary() {
+    if (!window.ComponentAuditorDB || !window.ComponentAuditorDB.getAll) {
+      console.error('Panel: Database wrapper not available');
+      return;
+    }
+    
+    window.ComponentAuditorDB.getAll()
+      .then(function(components) {
+        console.log('Panel: Loaded', components.length, 'components from library');
+        displayLibrary(components);
+        updateExportButton(components.length > 0);
+      })
+      .catch(function(error) {
+        console.error('Panel: Failed to load library', error);
+      });
+  }
+
+  /**
+   * Display components in the library grid
+   * @param {Array} components - Array of component objects
+   */
+  function displayLibrary(components) {
+    const libraryGrid = document.getElementById('library-grid');
+    const libraryEmpty = document.getElementById('library-empty');
+    
+    if (!libraryGrid || !libraryEmpty) {
+      return;
+    }
+    
+    // Clear existing items
+    libraryGrid.innerHTML = '';
+    
+    if (components.length === 0) {
+      libraryEmpty.style.display = 'block';
+      libraryGrid.style.display = 'none';
+      return;
+    }
+    
+    libraryEmpty.style.display = 'none';
+    libraryGrid.style.display = 'grid';
+    
+    // Create library items
+    components.forEach(function(component) {
+      const item = createLibraryItem(component);
+      libraryGrid.appendChild(item);
+    });
+  }
+
+  /**
+   * Create a library item element for a component
+   * @param {Object} component - Component data object
+   * @returns {HTMLElement} - Library item element
+   */
+  function createLibraryItem(component) {
+    const item = document.createElement('div');
+    item.className = 'library-item';
+    
+    const thumbnail = document.createElement('div');
+    thumbnail.className = 'library-item-thumbnail';
+    
+    const img = document.createElement('img');
+    img.src = component.visuals?.screenshot_base64 || '';
+    img.alt = component.label || 'Component';
+    thumbnail.appendChild(img);
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'library-item-delete';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.title = 'Delete component';
+    deleteBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      deleteComponent(component.id);
+    });
+    thumbnail.appendChild(deleteBtn);
+    
+    const info = document.createElement('div');
+    info.className = 'library-item-info';
+    
+    const name = document.createElement('div');
+    name.className = 'library-item-name';
+    name.textContent = component.label || 'Unnamed Component';
+    info.appendChild(name);
+    
+    const meta = document.createElement('div');
+    meta.className = 'library-item-meta';
+    const atomicLevel = component.semantics?.atomic_level || 'N/A';
+    const timestamp = component.meta?.timestamp ? new Date(component.meta.timestamp).toLocaleDateString() : '';
+    meta.textContent = atomicLevel + (timestamp ? ' • ' + timestamp : '');
+    info.appendChild(meta);
+    
+    item.appendChild(thumbnail);
+    item.appendChild(info);
+    
+    return item;
+  }
+
+  /**
+   * Delete a component from the library
+   * @param {string} id - Component ID
+   */
+  function deleteComponent(id) {
+    if (!id) {
+      console.error('Panel: Cannot delete component - no ID provided');
+      return;
+    }
+    
+    if (!window.ComponentAuditorDB || !window.ComponentAuditorDB.delete) {
+      console.error('Panel: Database wrapper not available');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this component?')) {
+      return;
+    }
+    
+    window.ComponentAuditorDB.delete(id)
+      .then(function() {
+        console.log('Panel: Component deleted successfully', id);
+        // Reload library to reflect changes
+        loadLibrary();
+      })
+      .catch(function(error) {
+        console.error('Panel: Failed to delete component', error);
+        alert('Error: Failed to delete component. ' + error.message);
+      });
+  }
+
+  /**
+   * Setup export button handler
+   */
+  function setupExportButton() {
+    const exportBtn = document.getElementById('export-btn');
+    
+    if (exportBtn) {
+      exportBtn.addEventListener('click', function() {
+        exportDataset();
+      });
+    }
+  }
+
+  /**
+   * Update export button enabled state
+   * @param {boolean} enabled - Whether to enable the button
+   */
+  function updateExportButton(enabled) {
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+      exportBtn.disabled = !enabled;
+    }
+  }
+
+  /**
+   * Export all components as a JSON dataset
+   */
+  function exportDataset() {
+    if (!window.ComponentAuditorDB || !window.ComponentAuditorDB.getAll) {
+      console.error('Panel: Database wrapper not available');
+      alert('Error: Database not initialized.');
+      return;
+    }
+    
+    window.ComponentAuditorDB.getAll()
+      .then(function(components) {
+        // Wrap components in metadata
+        const dataset = {
+          version: '1.0',
+          exportDate: new Date().toISOString(),
+          componentCount: components.length,
+          components: components
+        };
+        
+        // Convert to JSON string
+        const jsonString = JSON.stringify(dataset, null, 2);
+        
+        // Create blob and download
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'component-auditor-dataset-' + new Date().toISOString().split('T')[0] + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Clean up URL
+        setTimeout(function() {
+          URL.revokeObjectURL(url);
+        }, 100);
+        
+        console.log('Panel: Dataset exported successfully', components.length, 'components');
+        
+        // Show success message
+        const statusMessage = document.getElementById('status-message');
+        if (statusMessage) {
+          statusMessage.textContent = `Exported ${components.length} component(s) successfully!`;
+          statusMessage.style.color = '#34a853';
+          setTimeout(function() {
+            statusMessage.textContent = '';
+            statusMessage.style.color = '';
+          }, 3000);
+        }
+      })
+      .catch(function(error) {
+        console.error('Panel: Failed to export dataset', error);
+        alert('Error: Failed to export dataset. ' + error.message);
+      });
   }
 
   // Initialize when DOM is ready
